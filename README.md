@@ -1,1 +1,14 @@
-# Re-sampled-validation-and-feature-selection-
+<h1> 不均衡データのリサンプリングを考慮した交差検証/特徴量選択</h1>
+
+<h2>背景</h2>
+<p>製造機械の故障検知、クレジットカードの不正利用検知など、機械学習における「異常検知」の分野では、正列より負列のサンプル数が圧倒的に多い不均衡データを扱うことが多い。これら不均衡データを取り扱う場合しばしば実施されるのがデータのリサンプリングである。Pythonライブラリーでは、imbalanced-learnライブラリー内で利用可能なUndersampling, OverSampling, SMOTEクラスがあるが、これらの関数はTrain Data１つずつしか適用できない。またscikit-learnライブラリーで利用可能なcross_validateクラスは、初期化時点で代入したTrain Data及びTest Dataを分割して交差検証を実施するため、「Train DataとTest Dataの分割⇒Train Dataをリサンプリング⇒モデルで学習⇒Test Dataで精度検証⇒次のTrain, Testセットについて同様のことを実施」という、データのリサンプリングを組み込んだ交差検証が実施できない。</p>
+
+<p>同様にして、scikit-learn.feature_selection内にある特徴量逐次削減クラスであるRFECVも同じ問題を抱えており、データリサンプリング作業を組み込んだ特徴量選択が実施できない</p>
+
+<p>上記の問題を解決するため、データのリサンプリングプロセスを交差検証に組み込んだクラスと、データリサンプリングプロセスを特徴量逐次削減に組み込んだクラスを実装し、インポート可能なモジュールとして容易した</p>
+
+<h2>本リポジトリで用意したモジュール</h2>
+<ol>
+<li> 1. Resampled_learn.py (二値分類用モジュール)</li>
+<li> 2. Resampled_learn_multiclass.py (他クラス用モジュール)</li>
+</ol>
