@@ -1,0 +1,485 @@
+# coding: utf-8
+
+import numpy as np
+import pandas as pd
+import os
+from matplotlib import pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold, cross_val_predict
+import xgboost as xgb
+from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
+from imblearn.over_sampling import RandomOverSampler, SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.ensemble import BalancedBaggingClassifier
+from sklearn.pipeline import make_pipeline
+from tqdm import tqdm
+
+"""警告の非表示"""
+import warnings
+warnings.filterwarnings('ignore')
+
+#get_ipython().run_line_magic('precision', '3')
+#get_ipython().run_line_magic('matplotlib', 'inline')
+
+class Resampled_Cross_Validate:
+
+    def __init__(self, n_splits, sampler='UnderSampler', verbose=True):
+        self.n_splits = n_splits
+        self.verbose  = verbose
+        self.sampler = sampler
+
+        self.Matrix = 'No Value'
+        self.acc_ = 'No Value'
+        self.pre_ = 'No Value'
+        self.rec_ = 'No Value'
+        self.f1_ = 'No Value'
+        self.roc_auc_ = 'No Value'
+
+
+    def fit(self, X_train, y_train):
+
+        matrix = []
+        ACC = []
+        PRE = []
+        REC = []
+        F1 = []
+        ROC_AUC = []
+        k = 1
+
+        flod = KFold(n_splits=self.n_splits, random_state=1)
+
+        if self.verbose == True:
+            print("Start Processing Resampled Validation: %d splits" % self.n_splits)
+        else:
+            pass
+
+        if self.sampler == 'UnderSampler':
+            smt = RandomUnderSampler()
+        elif self.sampler == 'OverSampler':
+            smt = RandomOverSampler()
+        elif self.sampler == 'SMOTE':
+            smt = SMOTE()
+        else:
+            print('No Such Sampler. Please use Undersampler, OverSampler or SMOTE')
+
+        for train_index, test_index in flod.split(X_train, y_train):
+            x_ta = X_train.values[train_index]
+            x_te = X_train.values[test_index]
+            y_ta = y_train.values[train_index]
+            y_te = y_train.values[test_index]
+
+            negative_count = len(y_ta) - y_ta.sum()
+            positive_count = y_ta.sum()
+
+            if self.sampler == 'UnderSampler':
+                if negative_count >= positive_count:
+                    smt.ratio = {0: positive_count, 1: positive_count}
+                else:
+                    smt.ratio = {0: negative_count, 1: negative_count}
+            elif self.sampler == 'OverSampler':
+                if negative_count >= positive_count:
+                    smt.ratio = {0: negative_count, 1: negative_count}
+                else:
+                    smt.ratio = {0: positive_count, 1: positive_count}
+            elif self.sampler == 'SMOTE':
+                    smt.ratio = 'not minority'
+
+            x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+
+            sts = StandardScaler()
+            clf = xgb.XGBClassifier()
+            pipe = make_pipeline(sts, clf)
+
+            pipe.fit(x_ta_resampled, y_ta_resampled)
+            y_pred = pipe.predict(x_te)
+
+            matrix.append(confusion_matrix(y_te, y_pred))
+            ACC.append(accuracy_score(y_te, y_pred))
+            PRE.append(precision_score(y_te, y_pred))
+            REC.append(recall_score(y_te, y_pred))
+            F1.append(f1_score(y_te, y_pred))
+            ROC_AUC.append(roc_auc_score(y_te, y_pred))
+
+            if self.verbose == True:
+                print ("Done: %d, Totaling: %d" % (k, self.n_splits))
+            else:
+                pass
+
+            k += 1
+
+        self.Matrix = matrix
+        self.acc_ = np.array(ACC)
+        self.pre_ = np.array(PRE)
+        self.rec_ = np.array(REC)
+        self.f1_ = np.array(F1)
+        self.roc_auc_ = np.array(ROC_AUC)
+
+
+def get_importance_score(X, IM_score):
+
+    Questions = pd.DataFrame(X.columns)
+    importance = pd.DataFrame(IM_score)
+    Score = pd.concat([Questions, importance], axis=1)
+    Score.columns = ['Var', 'Score']
+    return Score
+
+
+def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, verbose=False):
+
+    ACC = []
+    PRE = []
+    REC = []
+    F1 = []
+    ROC_AUC = []
+    Importance_Score = []
+    k = 1
+
+    flod = KFold(n_splits=n_splits, random_state=1)
+
+    if sampler == 'UnderSampler':
+        smt = RandomUnderSampler()
+    elif sampler == 'OverSampler':
+        smt = RandomOverSampler()
+    elif sampler == 'SMOTE':
+        smt = SMOTE()
+    else:
+        print('No Such Sampler. Please use Undersampler, OverSampler or SMOTE')
+
+    for train_index, test_index in flod.split(X_train, y_train):
+        x_ta = X_train.values[train_index]
+        x_te = X_train.values[test_index]
+        y_ta = y_train.values[train_index]
+        y_te = y_train.values[test_index]
+
+        negative_count = len(y_ta) - y_ta.sum()
+        positive_count = y_ta.sum()
+
+        if sampler == 'UnderSampler':
+            if negative_count >= positive_count:
+                smt.ratio = {0: positive_count, 1: positive_count}
+            else:
+                smt.ratio = {0: negative_count, 1: negative_count}
+        elif sampler == 'OverSampler':
+            if negative_count >= positive_count:
+                smt.ratio = {0: negative_count, 1: negative_count}
+            else:
+                smt.ratio = {0: positive_count, 1: positive_count}
+        elif sampler == 'SMOTE':
+                smt.ratio = 'not minority'
+
+        x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+
+        sts = StandardScaler()
+        clf = xgb.XGBClassifier(n_jobs=-1)
+
+        sts.fit(x_ta_resampled)
+        x_ta_resampled = sts.transform(x_ta_resampled)
+        x_te = sts.transform(x_te)
+
+        clf.fit(x_ta_resampled, y_ta_resampled)
+        y_pred = clf.predict(x_te)
+
+        ACC.append(accuracy_score(y_te, y_pred))
+        ROC_AUC.append(roc_auc_score(y_te, y_pred))
+        F1.append(f1_score(y_te, y_pred))
+        PRE.append(precision_score(y_te, y_pred))
+        REC.append(recall_score(y_te, y_pred))
+
+        Importance_Score.append(clf.feature_importances_)
+
+        if verbose == True:
+            print ("Done: %d, Totaling: %d" % (k, n_splits))
+        else:
+            pass
+
+        k += 1
+
+    return np.array(ACC), np.array(ROC_AUC), np.array(F1), np.array(PRE), np.array(REC), get_importance_score(X_train, sum(Importance_Score) / n_splits)
+
+
+class Resampled_RFECV:
+
+    def __init__(self, n_steps, cv, sampler='UnderSampler', verbose=False):
+        self.n_steps = n_steps
+        self.cv = cv
+        self.sampler = sampler
+        self.verbose = verbose
+
+        self.mean_score_ = 'No Value'
+        self.std_score_ = 'No Value'
+        self.questions_ = 'No Value'
+
+    def fit(self, X, y):
+
+        if len(X.columns) % self.n_steps != 0:
+            print("Error: n_steps must be a divisior of %d" % len(X.columns))
+            return 'Error'
+        else:
+            "結果格納用リストの生成"
+            ACC_SCORE_mean = []
+            ROC_AUC_mean = []
+            F1_SCORE_mean = []
+            PRE_SCORE_mean = []
+            REC_SCORE_mean = []
+
+            ACC_SCORE_std = []
+            ROC_AUC_std = []
+            F1_SCORE_std = []
+            PRE_SCORE_std = []
+            REC_SCORE_std = []
+            Questions = []
+
+            "説明変数の初期化"
+            X_new = X
+
+            "計算ステップリストの用意"
+            step = np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps)[::-1]
+
+            if self.verbose == True:
+                print("Start Processing Resampled Feature Selection: %d Steps" % len(step))
+            else:
+                pass
+
+            for i in tqdm(range(len(step))):
+
+                if self.verbose == True:
+                    print("Fitting: %d features" % step[i])
+                else:
+                    pass
+
+                ACC, ROC_AUC, F1, PRE, REC, IM_score = Resampled_Valudation_Score(X_new, y, sampler=self.sampler, n_splits=self.cv, verbose=self.verbose)
+                IM_new = IM_score.sort_values(by='Score').reset_index(drop=True).drop(range(self.n_steps))
+
+                ACC_SCORE_mean.append(ACC.mean())
+                ROC_AUC_mean.append(ROC_AUC.mean())
+                F1_SCORE_mean.append(F1.mean())
+                PRE_SCORE_mean.append(PRE.mean())
+                REC_SCORE_mean.append(REC.mean())
+
+                ACC_SCORE_std.append(ACC.std())
+                ROC_AUC_std.append(ROC_AUC.std())
+                F1_SCORE_std.append(F1.std())
+                PRE_SCORE_std.append(PRE.std())
+                REC_SCORE_std.append(REC.std())
+
+                X_new = X_new.loc[:, IM_new.Var]
+
+                Questions.append(IM_score)
+
+            self.mean_score_ = {
+                                'ACC': np.array(ACC_SCORE_mean[::-1]),
+                                'ROC_AUC': np.array(ROC_AUC_mean[::-1]),
+                                'F1': np.array(F1_SCORE_mean[::-1]),
+                                'PRE':np.array(PRE_SCORE_mean[::-1]),
+                                'REC':np.array(REC_SCORE_mean[::-1])
+                               }
+
+            self.std_score_ = {
+                                'ACC': np.array(ACC_SCORE_std[::-1]),
+                                'ROC_AUC': np.array(ROC_AUC_std[::-1]),
+                                'F1':np.array(F1_SCORE_std[::-1]),
+                                'PRE':np.array(PRE_SCORE_std[::-1]),
+                                'REC':np.array(REC_SCORE_std[::-1])
+                              }
+
+            self.questions_ = Questions[::-1]
+
+
+    def select_num_Q(self, threshold, score = 'ROC_AUC'):
+        try:
+            Num_Q = np.where(self.mean_score_[score] > threshold)[0][0] + 1
+            return Num_Q
+        except:
+            print('Error')
+
+
+    def draw_figure(self, X, y, ymin=0.0, ymax=1.0, fill_btw=True):
+        """設問数と精度の関係を描画"""
+    #    No_of_Q = np.where(rfecv.mean_score_['ROC_AUC'] > 0.8)[0][0] + 1
+    #    No_of_Q = rfecv.select_num_Q(Threshold)
+
+        plt.clf()
+        fig = plt.figure(figsize=(8,5), facecolor='w')
+
+        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['ACC'], '-', label='Accuracy')
+        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['ROC_AUC'], '-', label='ROC AUC')
+        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['F1'], '--', label='F1 Score')
+        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['PRE'], '--', label='Precision Score')
+        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['REC'], '--', label='Recall Score')
+
+        if fill_btw == True:
+            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+                             self.mean_score_['ACC'] + self.std_score_['ACC'],
+                             self.mean_score_['ACC'] - self.std_score_['ACC'],
+                             alpha=0.15)
+
+            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+                             self.mean_score_['ROC_AUC'] + self.std_score_['ROC_AUC'],
+                             self.mean_score_['ROC_AUC'] - self.std_score_['ROC_AUC'],
+                             alpha=0.15)
+
+            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+                             self.mean_score_['F1'] + self.std_score_['F1'],
+                             self.mean_score_['F1'] - self.std_score_['F1'],
+                             alpha=0.15)
+
+            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+                             self.mean_score_['PRE'] + self.std_score_['PRE'],
+                             self.mean_score_['PRE'] - self.std_score_['PRE'],
+                             alpha=0.15)
+
+            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+                             self.mean_score_['REC'] + self.std_score_['REC'],
+                             self.mean_score_['REC'] - self.std_score_['REC'],
+                             alpha=0.15)
+        else:
+            pass
+
+        plt.xlabel('No. of Features Selected', fontsize = 12)
+        plt.ylabel('Validation Score (CV=%d)' % self.cv, fontsize = 12)
+        plt.title('Score curve', fontsize = 14)
+        plt.ylim(ymin, ymax)
+        plt.legend(loc='lower right', fontsize=8)
+        plt.show()
+
+    def draw_barchart(self, X, y):
+
+        df = self.questions_[len(X.columns)-1]
+        df = df.sort_values(by='Score', ascending=True)
+
+        plt.clf()
+        fig = plt.figure(figsize=(8,5), facecolor='w')
+
+        plt.barh(range(len(X.columns)), df.Score, align='center', color='r')
+        plt.xticks(fontsize=10)
+        plt.yticks(range(len(X.columns)), df.Var, fontsize=8)
+
+        plt.xlabel('Feature Importance Score', fontsize=12)
+        plt.ylabel('Questions', fontsize=12)
+        plt.title('Feature imporance Chart')
+
+        plt.show()
+
+
+class BalancedBagging_Valudation:
+
+    def __init__(self, cv, verbose=True, n_jobs=1, n_estimators=10):
+        self.cv = cv
+        self.verbose = verbose
+        self.n_jobs = n_jobs
+        self.n_estimators = n_estimators
+
+        self.Matrix = 'No Value'
+        self.acc_ = 'No Value'
+        self.pre_ = 'No Value'
+        self.rec_ = 'No Value'
+        self.f1_ = 'No Value'
+        self.roc_auc_ = 'No Value'
+
+        self.X_set = 'No Value'
+        self.Y_set = 'No Value'
+
+        self.flod = KFold(self.cv, random_state=71)
+
+    def fit(self, X_train, y_train):
+
+        matrix = []
+        ACC = []
+        PRE = []
+        REC = []
+        F1 = []
+        ROC_AUC = []
+
+        test_set_X = []
+        test_set_Y = []
+
+        k = 1
+
+        if self.verbose == True:
+            print("Checking Cross Validation Score with Balanced Bagging: %d splits" % self.cv)
+        else:
+            pass
+
+        for train_index, test_index in self.flod.split(X_train, y_train):
+            x_ta = X_train.values[train_index]
+            x_te = X_train.values[test_index]
+            y_ta = y_train.values[train_index]
+            y_te = y_train.values[test_index]
+
+            sts = StandardScaler()
+            clf = xgb.XGBClassifier(n_jobs = self.n_jobs)
+            usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
+            pipe = make_pipeline(sts, usbc)
+
+            pipe.fit(x_ta, y_ta)
+            y_pred = pipe.predict(x_te)
+
+            matrix.append(confusion_matrix(y_te, y_pred))
+            ACC.append(accuracy_score(y_te, y_pred))
+            PRE.append(precision_score(y_te, y_pred))
+            REC.append(recall_score(y_te, y_pred))
+            F1.append(f1_score(y_te, y_pred))
+            ROC_AUC.append(roc_auc_score(y_te, y_pred))
+
+            test_set_X.append(x_ta)
+            test_set_Y.append(y_ta)
+
+            if self.verbose == True:
+                print ("Done: %d, Totaling: %d" % (k, self.cv))
+            else:
+                pass
+
+            k += 1
+
+        self.Matrix = matrix
+        self.acc_ = np.array(ACC)
+        self.pre_ = np.array(PRE)
+        self.rec_ = np.array(REC)
+        self.f1_ = np.array(F1)
+        self.roc_auc_ = np.array(ROC_AUC)
+
+        self.X_set = test_set_X
+        self.Y_set = test_set_Y
+
+
+    def predict(self, X_test):
+        best_estimator = np.where(self.acc_ == self.acc_.max())[0][0]
+
+        sts = StandardScaler()
+        clf = xgb.XGBClassifier(n_jobs = self.n_jobs)
+        usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
+        pipe = make_pipeline(sts, usbc)
+
+        pipe.fit(self.X_set[best_estimator], self.Y_set[best_estimator])
+        Y_pred = pipe.predict(X_test)
+
+        return  Y_pred
+
+
+def Check_TestData(X_train, y_train, X_test, y_test):
+    matrix = []
+    PRE = []
+    REC = []
+    F1 = []
+    ROC_AUC = []
+
+    print("Checking Test Score with Balanced Bagging")
+
+    sts = StandardScaler()
+    clf = xgb.XGBClassifier(n_jobs=-1)
+    usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=-1, n_estimators=10, ratio='not minority')
+    pipe = make_pipeline(sts, usbc)
+
+    pipe.fit(X_train, y_train)
+    y_pred = pipe.predict(X_test)
+
+    matrix = confusion_matrix(y_test, y_pred)
+    PRE = precision_score(y_test, y_pred)
+    REC = recall_score(y_test, y_pred)
+    F1 = f1_score(y_test, y_pred)
+    ROC_AUC = roc_auc_score(y_test, y_pred)
+
+    return matrix, PRE, REC, F1, ROC_AUC
+
+
+
