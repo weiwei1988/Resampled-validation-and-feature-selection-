@@ -246,12 +246,7 @@ class Resampled_RFECV:
                 else:
                     pass
 
-                ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y,
-                                                                                        sampler=self.sampler,
-                                                                                        estimator=self.estimator,
-                                                                                        n_splits=self.cv,
-                                                                                        verbose=self.verbose)
-
+                ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y, sampler=self.sampler, estimator=self.estimator, n_splits=self.cv, verbose=self.verbose)
                 IM_new = IM_score.sort_values(by='Score').reset_index(drop=True).drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
