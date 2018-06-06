@@ -2,10 +2,9 @@
 
 import numpy as np
 import pandas as pd
-import os
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold, cross_val_predict, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 import xgboost as xgb
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score, accuracy_score, log_loss
 from imblearn.over_sampling import RandomOverSampler, SMOTE
@@ -18,14 +17,12 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
-#get_ipython().run_line_magic('precision', '3')
-#get_ipython().run_line_magic('matplotlib', 'inline')
 
 class Resampled_Cross_Validate:
 
     def __init__(self, n_splits, sampler=RandomUnderSampler(ratio='not minority'), estimator=xgb.XGBClassifier(n_jobs=-1), average = 'micro', verbose=True):
         self.n_splits = n_splits
-        self.verbose  = verbose
+        self.verbose = verbose
         self.sampler = sampler
         self.estimator = estimator
         self.average = average
@@ -53,7 +50,7 @@ class Resampled_Cross_Validate:
 
         flod = StratifiedKFold(n_splits=self.n_splits)
 
-        if self.verbose == True:
+        if self.verbose is True:
             print("Start Processing Resampled Validation: %d splits" % self.n_splits)
         else:
             pass
@@ -88,7 +85,7 @@ class Resampled_Cross_Validate:
             F1.append(f1_score(y_te, y_pred, average=self.average))
             logloss.append(log_loss(y_te, y_prob))
 
-            if self.verbose == True:
+            if self.verbose is True:
                 print ("Done: %d, Totaling: %d" % (k, self.n_splits))
             else:
                 pass
@@ -116,7 +113,6 @@ def get_importance_score(X, IM_score):
 
 def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, average, verbose=False):
 
-    matrix = []
     ACC = []
 
     PRE = []
@@ -163,15 +159,15 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
         logloss.append(log_loss(y_te, y_prob))
 
         try:
-            if hasattr(estimator, 'feature_importances_') == True:
+            if hasattr(estimator, 'feature_importances_') is True:
                 Importance_Score.append(estimator.feature_importances_)
 
-            elif hasattr(estimator, 'coef_') == True:
+            elif hasattr(estimator, 'coef_') is True:
                 c = np.power(estimator.coef_, 2)
                 feature_im = np.sum(c, axis=0)
                 Importance_Score.append(feature_im)
 
-            elif hasattr(estimator, 'dual_coef_') == True:
+            elif hasattr(estimator, 'dual_coef_') is True:
                 w = np.matmul(estimator.dual_coef_, estimator.support_vectors_)
                 c = np.power(w, 2)
                 feature_im = np.sum(c, axis=0)
@@ -180,8 +176,8 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
         except:
             print('Error on getting feature importance. Please use estimators with atrribute "coef_" or "feature_importances_"')
 
-        if verbose == True:
-            print ("Done: %d, Totaling: %d" % (k, n_splits))
+        if verbose is True:
+            print("Done: %d, Totaling: %d" % (k, n_splits))
         else:
             pass
 
@@ -231,14 +227,14 @@ class Resampled_RFECV:
             "計算ステップリストの用意"
             step = np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps)[::-1]
 
-            if self.verbose == True:
+            if self.verbose is True:
                 print("Start Processing Resampled Feature Selection: %d Steps" % len(step))
             else:
                 pass
 
             for i in tqdm(range(len(step))):
 
-                if self.verbose == True:
+                if self.verbose is True:
                     print("Fitting: %d features" % step[i])
                 else:
                     pass
@@ -269,25 +265,24 @@ class Resampled_RFECV:
             self.mean_score_ = {
                                 'ACC': np.array(ACC_SCORE_mean[::-1]),
                                 'F1': np.array(F1_SCORE_mean[::-1]),
-                                'PRE':np.array(PRE_SCORE_mean[::-1]),
-                                'REC':np.array(REC_SCORE_mean[::-1]),
-                                'logloss':np.array(logloss_mean[::-1])
+                                'PRE': np.array(PRE_SCORE_mean[::-1]),
+                                'REC': np.array(REC_SCORE_mean[::-1]),
+                                'logloss': np.array(logloss_mean[::-1])
                                }
 
             self.std_score_ = {
                                 'ACC': np.array(ACC_SCORE_std[::-1]),
-                                'F1':np.array(F1_SCORE_std[::-1]),
-                                'PRE':np.array(PRE_SCORE_std[::-1]),
-                                'REC':np.array(REC_SCORE_std[::-1]),
-                                'logloss':np.array(logloss_std[::-1])
+                                'F1': np.array(F1_SCORE_std[::-1]),
+                                'PRE': np.array(PRE_SCORE_std[::-1]),
+                                'REC': np.array(REC_SCORE_std[::-1]),
+                                'logloss': np.array(logloss_std[::-1])
                               }
 
             self.questions_ = Questions[::-1]
 
-
-    def select_num_Q(self, threshold, score = 'ACC'):
+    def select_num_Q(self, threshold, score ='ACC'):
         try:
-            if score == 'logloss':
+            if score is 'logloss':
                 Num_Q = np.where(self.mean_score_[score] < threshold)[0][0] + 1
             else:
                 Num_Q = np.where(self.mean_score_[score] > threshold)[0][0] + 1
@@ -295,7 +290,6 @@ class Resampled_RFECV:
             return Num_Q
         except:
             print('Error')
-
 
     def draw_figure(self, X, y, ymin=0.0, ymax=1.0, fill_btw=True):
         """設問数と精度の関係を描画"""
@@ -309,7 +303,7 @@ class Resampled_RFECV:
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['REC'], '--', label='Recall Score_'+str(self.average))
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['logloss'], '--', label='Log Loss')
 
-        if fill_btw == True:
+        if fill_btw is True:
             plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
                              self.mean_score_['ACC'] + self.std_score_['ACC'],
                              self.mean_score_['ACC'] - self.std_score_['ACC'],
@@ -336,11 +330,10 @@ class Resampled_RFECV:
                              alpha=0.15)
         else:
             pass
-        plt.vlines(No_of_Q, 0.0, 1.0, 'red', linestyles='dashed', label ='No. of Q =' + str(No_of_Q))
-        plt.hlines(Threshold, 0, 100, 'black', linestyles='dashed', label = 'Threshold')
-        plt.xlabel('No. of Features Selected', fontsize = 12)
-        plt.ylabel('Validation Score (CV=%d)' % self.cv, fontsize = 12)
-        plt.title('Score curve', fontsize = 14)
+
+        plt.xlabel('No. of Features Selected', fontsize=12)
+        plt.ylabel('Validation Score (CV=%d)' % self.cv, fontsize=12)
+        plt.title('Score curve', fontsize=14)
         plt.ylim(ymin, ymax)
         plt.legend(loc='best', fontsize=8)
         plt.show()
@@ -399,7 +392,7 @@ class BalancedBagging_Valudation:
 
         k = 1
 
-        if self.verbose == True:
+        if self.verbose is True:
             print("Checking Cross Validation Score with Balanced Bagging: %d splits" % self.cv)
         else:
             pass
@@ -411,7 +404,7 @@ class BalancedBagging_Valudation:
             y_te = y_train.values[test_index]
 
             sts = StandardScaler()
-            clf = xgb.XGBClassifier(n_jobs = self.n_jobs)
+            clf = xgb.XGBClassifier(n_jobs=self.n_jobs)
             usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
             pipe = make_pipeline(sts, usbc)
 
@@ -429,8 +422,8 @@ class BalancedBagging_Valudation:
             test_set_X.append(x_ta)
             test_set_Y.append(y_ta)
 
-            if self.verbose == True:
-                print ("Done: %d, Totaling: %d" % (k, self.cv))
+            if self.verbose is True:
+                print("Done: %d, Totaling: %d" % (k, self.cv))
             else:
                 pass
 
@@ -446,19 +439,18 @@ class BalancedBagging_Valudation:
         self.X_set = test_set_X
         self.Y_set = test_set_Y
 
-
     def predict(self, X_test):
-        best_estimator = np.where(self.logloss_ == self.logloss_.min())[0][0]
+        best_estimator = np.where(self.logloss_ is self.logloss_.min())[0][0]
 
         sts = StandardScaler()
-        clf = xgb.XGBClassifier(n_jobs = self.n_jobs)
+        clf = xgb.XGBClassifier(n_jobs=self.n_jobs)
         usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
         pipe = make_pipeline(sts, usbc)
 
         pipe.fit(self.X_set[best_estimator], self.Y_set[best_estimator])
         Y_pred = pipe.predict(X_test)
 
-        return  Y_pred
+        return Y_pred
 
 
 def Check_TestData(X_train, y_train, X_test, y_test):
