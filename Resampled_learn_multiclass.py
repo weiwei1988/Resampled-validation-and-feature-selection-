@@ -161,10 +161,24 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
         PRE.append(precision_score(y_te, y_pred, average=average))
         REC.append(recall_score(y_te, y_pred, average=average))
         logloss.append(log_loss(y_te, y_prob))
+
         try:
-            Importance_Score.append(estimator.feature_importances_)
+            if hasattr(estimator, 'feature_importances_') == True:
+                Importance_Score.append(estimator.feature_importances_)
+
+            elif hasattr(estimator, 'coef_') == True:
+                c = np.power(estimator.coef_, 2)
+                feature_im = np.sum(c, axis=0)
+                Importance_Score.append(feature_im)
+
+            elif hasattr(estimator, 'dual_coef_') == True:
+                w = np.matmul(estimator.dual_coef_, estimator.support_vectors_)
+                c = np.power(w, 2)
+                feature_im = np.sum(c, axis=0)
+                Importance_Score.append(feature_im)
+
         except:
-            print('Error on getting feature importance. Please use estimators with atrribute "feature_importances_"')
+            print('Error on getting feature importance. Please use estimators with atrribute "coef_" or "feature_importances_"')
 
         if verbose == True:
             print ("Done: %d, Totaling: %d" % (k, n_splits))
@@ -273,7 +287,11 @@ class Resampled_RFECV:
 
     def select_num_Q(self, threshold, score = 'ACC'):
         try:
-            Num_Q = np.where(self.mean_score_[score] > threshold)[0][0] + 1
+            if score == 'logloss':
+                Num_Q = np.where(self.mean_score_[score] < threshold)[0][0] + 1
+            else:
+                Num_Q = np.where(self.mean_score_[score] > threshold)[0][0] + 1
+
             return Num_Q
         except:
             print('Error')
@@ -318,12 +336,13 @@ class Resampled_RFECV:
                              alpha=0.15)
         else:
             pass
-
+        plt.vlines(No_of_Q, 0.0, 1.0, 'red', linestyles='dashed', label ='No. of Q =' + str(No_of_Q))
+        plt.hlines(Threshold, 0, 100, 'black', linestyles='dashed', label = 'Threshold')
         plt.xlabel('No. of Features Selected', fontsize = 12)
         plt.ylabel('Validation Score (CV=%d)' % self.cv, fontsize = 12)
         plt.title('Score curve', fontsize = 14)
         plt.ylim(ymin, ymax)
-        plt.legend(loc='lower right', fontsize=6)
+        plt.legend(loc='best', fontsize=8)
         plt.show()
 
     def draw_barchart(self, X, y):
@@ -347,11 +366,12 @@ class Resampled_RFECV:
 
 class BalancedBagging_Valudation:
 
-    def __init__(self, cv, verbose=True, n_jobs=1, n_estimators=10):
+    def __init__(self, cv, verbose=True, n_jobs=1, n_estimators=10, average='micro'):
         self.cv = cv
         self.verbose = verbose
         self.n_jobs = n_jobs
         self.n_estimators = n_estimators
+        self.average = average
 
         self.Matrix = 'No Value'
         self.acc_ = 'No Value'
@@ -401,9 +421,9 @@ class BalancedBagging_Valudation:
 
             matrix.append(confusion_matrix(y_te, y_pred))
             ACC.append(accuracy_score(y_te, y_pred))
-            PRE.append(precision_score(y_te, y_pred, average=average))
-            REC.append(recall_score(y_te, y_pred, average=average))
-            F1.append(f1_score(y_te, y_pred, average=average))
+            PRE.append(precision_score(y_te, y_pred, average=self.average))
+            REC.append(recall_score(y_te, y_pred, average=self.average))
+            F1.append(f1_score(y_te, y_pred, average=self.average))
             logloss.append(log_loss(y_te, y_prob))
 
             test_set_X.append(x_ta)
@@ -465,6 +485,3 @@ def Check_TestData(X_train, y_train, X_test, y_test):
     ROC_AUC = roc_auc_score(y_test, y_pred)
 
     return matrix, PRE, REC, F1, ROC_AUC
-
-
-
