@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold, cross_val_predict
 import xgboost as xgb
-from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
+from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score, accuracy_score, log_loss
 from imblearn.over_sampling import RandomOverSampler, SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.ensemble import BalancedBaggingClassifier
@@ -23,10 +23,11 @@ warnings.filterwarnings('ignore')
 
 class Resampled_Cross_Validate:
 
-    def __init__(self, n_splits, sampler='UnderSampler', verbose=True):
+    def __init__(self, n_splits, sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), verbose=True):
         self.n_splits = n_splits
         self.verbose  = verbose
         self.sampler = sampler
+        self.estimator = estimator
 
         self.Matrix = 'No Value'
         self.acc_ = 'No Value'
@@ -34,6 +35,7 @@ class Resampled_Cross_Validate:
         self.rec_ = 'No Value'
         self.f1_ = 'No Value'
         self.roc_auc_ = 'No Value'
+        self.logloss = 'No Value'
 
 
     def fit(self, X_train, y_train):
@@ -44,6 +46,7 @@ class Resampled_Cross_Validate:
         REC = []
         F1 = []
         ROC_AUC = []
+        logloss = []
         k = 1
 
         flod = KFold(n_splits=self.n_splits, random_state=1)
@@ -52,15 +55,6 @@ class Resampled_Cross_Validate:
             print("Start Processing Resampled Validation: %d splits" % self.n_splits)
         else:
             pass
-
-        if self.sampler == 'UnderSampler':
-            smt = RandomUnderSampler()
-        elif self.sampler == 'OverSampler':
-            smt = RandomOverSampler()
-        elif self.sampler == 'SMOTE':
-            smt = SMOTE()
-        else:
-            print('No Such Sampler. Please use Undersampler, OverSampler or SMOTE')
 
         for train_index, test_index in flod.split(X_train, y_train):
             x_ta = X_train.values[train_index]
@@ -71,27 +65,24 @@ class Resampled_Cross_Validate:
             negative_count = len(y_ta) - y_ta.sum()
             positive_count = y_ta.sum()
 
-            if self.sampler == 'UnderSampler':
-                if negative_count >= positive_count:
-                    smt.ratio = {0: positive_count, 1: positive_count}
-                else:
-                    smt.ratio = {0: negative_count, 1: negative_count}
-            elif self.sampler == 'OverSampler':
-                if negative_count >= positive_count:
-                    smt.ratio = {0: negative_count, 1: negative_count}
-                else:
-                    smt.ratio = {0: positive_count, 1: positive_count}
-            elif self.sampler == 'SMOTE':
-                    smt.ratio = 'not minority'
+            try:
+                x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(x_ta, y_ta)
 
-            x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+            except:
+                print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+
 
             sts = StandardScaler()
             clf = xgb.XGBClassifier()
             pipe = make_pipeline(sts, clf)
 
-            pipe.fit(x_ta_resampled, y_ta_resampled)
-            y_pred = pipe.predict(x_te)
+            try:
+                pipe.fit(x_ta_resampled, y_ta_resampled)
+                y_pred = pipe.predict(x_te)
+                y_prob = pipe.predict_proba(x_te)
+
+            except:
+                print('Error on estimator, Please use right estimator for multiclass classification')
 
             matrix.append(confusion_matrix(y_te, y_pred))
             ACC.append(accuracy_score(y_te, y_pred))
@@ -99,6 +90,7 @@ class Resampled_Cross_Validate:
             REC.append(recall_score(y_te, y_pred))
             F1.append(f1_score(y_te, y_pred))
             ROC_AUC.append(roc_auc_score(y_te, y_pred))
+            logloss.append(log_loss(y_te, y_prob))
 
             if self.verbose == True:
                 print ("Done: %d, Totaling: %d" % (k, self.n_splits))
@@ -113,6 +105,7 @@ class Resampled_Cross_Validate:
         self.rec_ = np.array(REC)
         self.f1_ = np.array(F1)
         self.roc_auc_ = np.array(ROC_AUC)
+        self.logloss_ = np.array(logloss)
 
 
 def get_importance_score(X, IM_score):
@@ -124,7 +117,7 @@ def get_importance_score(X, IM_score):
     return Score
 
 
-def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, verbose=False):
+def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, verbose=False):
 
     ACC = []
     PRE = []
@@ -132,18 +125,10 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, verbose=Fals
     F1 = []
     ROC_AUC = []
     Importance_Score = []
+    logloss = []
     k = 1
 
     flod = KFold(n_splits=n_splits, random_state=1)
-
-    if sampler == 'UnderSampler':
-        smt = RandomUnderSampler()
-    elif sampler == 'OverSampler':
-        smt = RandomOverSampler()
-    elif sampler == 'SMOTE':
-        smt = SMOTE()
-    else:
-        print('No Such Sampler. Please use Undersampler, OverSampler or SMOTE')
 
     for train_index, test_index in flod.split(X_train, y_train):
         x_ta = X_train.values[train_index]
@@ -154,38 +139,48 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, verbose=Fals
         negative_count = len(y_ta) - y_ta.sum()
         positive_count = y_ta.sum()
 
-        if sampler == 'UnderSampler':
-            if negative_count >= positive_count:
-                smt.ratio = {0: positive_count, 1: positive_count}
-            else:
-                smt.ratio = {0: negative_count, 1: negative_count}
-        elif sampler == 'OverSampler':
-            if negative_count >= positive_count:
-                smt.ratio = {0: negative_count, 1: negative_count}
-            else:
-                smt.ratio = {0: positive_count, 1: positive_count}
-        elif sampler == 'SMOTE':
-                smt.ratio = 'not minority'
+        try:
+            x_ta_resampled, y_ta_resampled = sampler.fit_sample(x_ta, y_ta)
 
-        x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+        except:
+            print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
         sts = StandardScaler()
-        clf = xgb.XGBClassifier(n_jobs=-1)
 
         sts.fit(x_ta_resampled)
         x_ta_resampled = sts.transform(x_ta_resampled)
         x_te = sts.transform(x_te)
 
-        clf.fit(x_ta_resampled, y_ta_resampled)
-        y_pred = clf.predict(x_te)
+        try:
+            estimator.fit(x_ta_resampled, y_ta_resampled)
+            y_pred = estimator.predict(x_te)
+            y_prob = estimator.predict_proba(x_te)
+
+        except:
+            print('Error on estimator. Please use right estimator for multiclass classification')
 
         ACC.append(accuracy_score(y_te, y_pred))
         ROC_AUC.append(roc_auc_score(y_te, y_pred))
         F1.append(f1_score(y_te, y_pred))
         PRE.append(precision_score(y_te, y_pred))
         REC.append(recall_score(y_te, y_pred))
+        logloss.append(log_loss(y_te, y_prob))
 
-        Importance_Score.append(clf.feature_importances_)
+        try:
+            if hasattr(estimator, 'feature_importances_') == True:
+                Importance_Score.append(estimator.feature_importances_)
+
+            elif hasattr(estimator, 'coef_') == True:
+                feature_im = np.abs(estimator.coef_)
+                Importance_Score.append(feature_im)
+
+            elif hasattr(estimator, 'dual_coef_') == True:
+                w = np.matmul(estimator.dual_coef_, estimator.support_vectors_)
+                feature_im = np.abs(w)
+                Importance_Score.append(feature_im)
+
+        except:
+            print('Error on getting feature importance. Please use estimators with atrribute "coef_" or "feature_importances_"')
 
         if verbose == True:
             print ("Done: %d, Totaling: %d" % (k, n_splits))
@@ -194,15 +189,16 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, verbose=Fals
 
         k += 1
 
-    return np.array(ACC), np.array(ROC_AUC), np.array(F1), np.array(PRE), np.array(REC), get_importance_score(X_train, sum(Importance_Score) / n_splits)
+    return np.array(ACC), np.array(ROC_AUC), np.array(F1), np.array(PRE), np.array(REC), np.array(logloss), get_importance_score(X_train, sum(Importance_Score) / n_splits)
 
 
 class Resampled_RFECV:
 
-    def __init__(self, n_steps, cv, sampler='UnderSampler', verbose=False):
+    def __init__(self, n_steps, cv, sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), verbose=False):
         self.n_steps = n_steps
         self.cv = cv
         self.sampler = sampler
+        self.estimator = estimator
         self.verbose = verbose
 
         self.mean_score_ = 'No Value'
@@ -221,12 +217,15 @@ class Resampled_RFECV:
             F1_SCORE_mean = []
             PRE_SCORE_mean = []
             REC_SCORE_mean = []
+            logloss_mean = []
 
             ACC_SCORE_std = []
             ROC_AUC_std = []
             F1_SCORE_std = []
             PRE_SCORE_std = []
             REC_SCORE_std = []
+            logloss_std = []
+
             Questions = []
 
             "説明変数の初期化"
@@ -247,7 +246,7 @@ class Resampled_RFECV:
                 else:
                     pass
 
-                ACC, ROC_AUC, F1, PRE, REC, IM_score = Resampled_Valudation_Score(X_new, y, sampler=self.sampler, n_splits=self.cv, verbose=self.verbose)
+                ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y, sampler=self.sampler, n_splits=self.cv, verbose=self.verbose)
                 IM_new = IM_score.sort_values(by='Score').reset_index(drop=True).drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
@@ -255,12 +254,14 @@ class Resampled_RFECV:
                 F1_SCORE_mean.append(F1.mean())
                 PRE_SCORE_mean.append(PRE.mean())
                 REC_SCORE_mean.append(REC.mean())
+                logloss_mean.append(logloss.mean())
 
                 ACC_SCORE_std.append(ACC.std())
                 ROC_AUC_std.append(ROC_AUC.std())
                 F1_SCORE_std.append(F1.std())
                 PRE_SCORE_std.append(PRE.std())
                 REC_SCORE_std.append(REC.std())
+                logloss_std.append(logloss.std())
 
                 X_new = X_new.loc[:, IM_new.Var]
 
@@ -271,7 +272,8 @@ class Resampled_RFECV:
                                 'ROC_AUC': np.array(ROC_AUC_mean[::-1]),
                                 'F1': np.array(F1_SCORE_mean[::-1]),
                                 'PRE':np.array(PRE_SCORE_mean[::-1]),
-                                'REC':np.array(REC_SCORE_mean[::-1])
+                                'REC':np.array(REC_SCORE_mean[::-1]),
+                                'logloss':np.array(logloss_mean[::-1])
                                }
 
             self.std_score_ = {
@@ -279,7 +281,8 @@ class Resampled_RFECV:
                                 'ROC_AUC': np.array(ROC_AUC_std[::-1]),
                                 'F1':np.array(F1_SCORE_std[::-1]),
                                 'PRE':np.array(PRE_SCORE_std[::-1]),
-                                'REC':np.array(REC_SCORE_std[::-1])
+                                'REC':np.array(REC_SCORE_std[::-1]),
+                                'logloss':np.array(logloss_std[::-1])
                               }
 
             self.questions_ = Questions[::-1]
@@ -287,8 +290,12 @@ class Resampled_RFECV:
 
     def select_num_Q(self, threshold, score = 'ROC_AUC'):
         try:
-            Num_Q = np.where(self.mean_score_[score] > threshold)[0][0] + 1
-            return Num_Q
+            if score != 'logloss':
+                Num_Q = np.where(self.mean_score_[score] > threshold)[0][0] + 1
+                return Num_Q
+            else:
+                Num_Q = np.where(self.mean_score_[score] < threshold)[0][0] + 1
+                return Num_Q
         except:
             print('Error')
 
@@ -306,6 +313,7 @@ class Resampled_RFECV:
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['F1'], '--', label='F1 Score')
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['PRE'], '--', label='Precision Score')
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['REC'], '--', label='Recall Score')
+        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['logloss'], '--', label='logloss')
 
         if fill_btw == True:
             plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
@@ -332,6 +340,11 @@ class Resampled_RFECV:
                              self.mean_score_['REC'] + self.std_score_['REC'],
                              self.mean_score_['REC'] - self.std_score_['REC'],
                              alpha=0.15)
+
+            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+                            self.mean_score_['REC'] + self.std_score_['REC'],
+                            self.mean_score_['REC'] - self.std_score_['REC'],
+                             alpha=0.15)
         else:
             pass
 
@@ -339,7 +352,7 @@ class Resampled_RFECV:
         plt.ylabel('Validation Score (CV=%d)' % self.cv, fontsize = 12)
         plt.title('Score curve', fontsize = 14)
         plt.ylim(ymin, ymax)
-        plt.legend(loc='lower right', fontsize=8)
+        plt.legend(loc='best', fontsize=8)
         plt.show()
 
     def draw_barchart(self, X, y):
@@ -480,6 +493,3 @@ def Check_TestData(X_train, y_train, X_test, y_test):
     ROC_AUC = roc_auc_score(y_test, y_pred)
 
     return matrix, PRE, REC, F1, ROC_AUC
-
-
-
