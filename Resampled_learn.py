@@ -171,11 +171,11 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
                 Importance_Score.append(estimator.feature_importances_)
 
             elif hasattr(estimator, 'coef_') == True:
-                feature_im = np.abs(estimator.coef_)
+                feature_im = np.abs(estimator.coef_).T
                 Importance_Score.append(feature_im)
 
             elif hasattr(estimator, 'dual_coef_') == True:
-                w = np.matmul(estimator.dual_coef_, estimator.support_vectors_)
+                w = np.matmul(estimator.dual_coef_, estimator.support_vectors_).T
                 feature_im = np.abs(w)
                 Importance_Score.append(feature_im)
 
@@ -246,7 +246,12 @@ class Resampled_RFECV:
                 else:
                     pass
 
-                ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y, sampler=self.sampler, n_splits=self.cv, verbose=self.verbose)
+                ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y,
+                                                                                        sampler=self.sampler,
+                                                                                        estimator=self.estimator,
+                                                                                        n_splits=self.cv,
+                                                                                        verbose=self.verbose)
+
                 IM_new = IM_score.sort_values(by='Score').reset_index(drop=True).drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
@@ -342,8 +347,8 @@ class Resampled_RFECV:
                              alpha=0.15)
 
             plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
-                            self.mean_score_['REC'] + self.std_score_['REC'],
-                            self.mean_score_['REC'] - self.std_score_['REC'],
+                            self.mean_score_['logloss'] + self.std_score_['logloss'],
+                            self.mean_score_['logloss'] - self.std_score_['logloss'],
                              alpha=0.15)
         else:
             pass
