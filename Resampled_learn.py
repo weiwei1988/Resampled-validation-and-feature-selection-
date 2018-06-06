@@ -5,7 +5,7 @@ import pandas as pd
 import os
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold, cross_val_predict
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
 import xgboost as xgb
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score, accuracy_score, log_loss
 from imblearn.over_sampling import RandomOverSampler, SMOTE
@@ -49,7 +49,7 @@ class Resampled_Cross_Validate:
         logloss = []
         k = 1
 
-        flod = KFold(n_splits=self.n_splits, random_state=1)
+        flod = StratifiedKFold(n_splits=self.n_splits)
 
         if self.verbose == True:
             print("Start Processing Resampled Validation: %d splits" % self.n_splits)
@@ -128,7 +128,7 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
     logloss = []
     k = 1
 
-    flod = KFold(n_splits=n_splits, random_state=1)
+    flod = StratifiedKFold(n_splits=n_splits)
 
     for train_index, test_index in flod.split(X_train, y_train):
         x_ta = X_train.values[train_index]
@@ -171,7 +171,7 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
                 Importance_Score.append(estimator.feature_importances_)
 
             elif hasattr(estimator, 'coef_') == True:
-                feature_im = np.abs(estimator.coef_).T
+                feature_im = np.abs(estimator.coef_).ravel()
                 Importance_Score.append(feature_im)
 
             elif hasattr(estimator, 'dual_coef_') == True:
@@ -247,7 +247,8 @@ class Resampled_RFECV:
                     pass
 
                 ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y, sampler=self.sampler, estimator=self.estimator, n_splits=self.cv, verbose=self.verbose)
-                IM_new = IM_score.sort_values(by='Score').reset_index(drop=True).drop(range(self.n_steps))
+                IM_score = IM_score.sort_values(by='Score').reset_index(drop=True)
+                IM_new = IM_score.drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
                 ROC_AUC_mean.append(ROC_AUC.mean())
