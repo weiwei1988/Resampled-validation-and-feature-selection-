@@ -2,10 +2,9 @@
 
 import numpy as np
 import pandas as pd
-import os
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.model_selection import StratifiedKFold
 import xgboost as xgb
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score, accuracy_score, log_loss
 from imblearn.over_sampling import RandomOverSampler, SMOTE
@@ -18,14 +17,13 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
-#get_ipython().run_line_magic('precision', '3')
-#get_ipython().run_line_magic('matplotlib', 'inline')
 
 class Resampled_Cross_Validate:
 
-    def __init__(self, n_splits, sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), verbose=True):
-        self.n_splits = n_splits
-        self.verbose  = verbose
+    def __init__(self, cv,
+                sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), verbose=True):
+        self.cv = cv
+        self.verbose = verbose
         self.sampler = sampler
         self.estimator = estimator
 
@@ -36,7 +34,6 @@ class Resampled_Cross_Validate:
         self.f1_ = 'No Value'
         self.roc_auc_ = 'No Value'
         self.logloss = 'No Value'
-
 
     def fit(self, X_train, y_train):
 
@@ -49,10 +46,10 @@ class Resampled_Cross_Validate:
         logloss = []
         k = 1
 
-        flod = StratifiedKFold(n_splits=self.n_splits)
+        flod = StratifiedKFold(n_splits=self.cv)
 
-        if self.verbose == True:
-            print("Start Processing Resampled Validation: %d splits" % self.n_splits)
+        if self.verbose is True:
+            print("Start Processing Resampled Validation: %d splits" % self.cv)
         else:
             pass
 
@@ -62,15 +59,11 @@ class Resampled_Cross_Validate:
             y_ta = y_train.values[train_index]
             y_te = y_train.values[test_index]
 
-            negative_count = len(y_ta) - y_ta.sum()
-            positive_count = y_ta.sum()
-
             try:
                 x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(x_ta, y_ta)
 
             except:
                 print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
-
 
             sts = StandardScaler()
             clf = xgb.XGBClassifier()
@@ -92,8 +85,8 @@ class Resampled_Cross_Validate:
             ROC_AUC.append(roc_auc_score(y_te, y_pred))
             logloss.append(log_loss(y_te, y_prob))
 
-            if self.verbose == True:
-                print ("Done: %d, Totaling: %d" % (k, self.n_splits))
+            if self.verbose is True:
+                print("Done: %d, Totaling: %d" % (k, self.cv))
             else:
                 pass
 
@@ -136,9 +129,6 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
         y_ta = y_train.values[train_index]
         y_te = y_train.values[test_index]
 
-        negative_count = len(y_ta) - y_ta.sum()
-        positive_count = y_ta.sum()
-
         try:
             x_ta_resampled, y_ta_resampled = sampler.fit_sample(x_ta, y_ta)
 
@@ -167,23 +157,23 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
         logloss.append(log_loss(y_te, y_prob))
 
         try:
-            if hasattr(estimator, 'feature_importances_') == True:
+            if hasattr(estimator, 'feature_importances_') is True:
                 Importance_Score.append(estimator.feature_importances_)
 
-            elif hasattr(estimator, 'coef_') == True:
+            elif hasattr(estimator, 'coef_') is True:
                 feature_im = np.abs(estimator.coef_).ravel()
                 Importance_Score.append(feature_im)
 
-            elif hasattr(estimator, 'dual_coef_') == True:
-                w = np.matmul(estimator.dual_coef_, estimator.support_vectors_).T
+            elif hasattr(estimator, 'dual_coef_') is True:
+                w = np.matmul(estimator.dual_coef_, estimator.support_vectors_).transpose()
                 feature_im = np.abs(w)
                 Importance_Score.append(feature_im)
 
         except:
             print('Error on getting feature importance. Please use estimators with atrribute "coef_" or "feature_importances_"')
 
-        if verbose == True:
-            print ("Done: %d, Totaling: %d" % (k, n_splits))
+        if verbose is True:
+            print("Done: %d, Totaling: %d" % (k, n_splits))
         else:
             pass
 
@@ -234,14 +224,14 @@ class Resampled_RFECV:
             "計算ステップリストの用意"
             step = np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps)[::-1]
 
-            if self.verbose == True:
+            if self.verbose is True:
                 print("Start Processing Resampled Feature Selection: %d Steps" % len(step))
             else:
                 pass
 
             for i in tqdm(range(len(step))):
 
-                if self.verbose == True:
+                if self.verbose is True:
                     print("Fitting: %d features" % step[i])
                 else:
                     pass
@@ -272,22 +262,21 @@ class Resampled_RFECV:
                                 'ACC': np.array(ACC_SCORE_mean[::-1]),
                                 'ROC_AUC': np.array(ROC_AUC_mean[::-1]),
                                 'F1': np.array(F1_SCORE_mean[::-1]),
-                                'PRE':np.array(PRE_SCORE_mean[::-1]),
-                                'REC':np.array(REC_SCORE_mean[::-1]),
-                                'logloss':np.array(logloss_mean[::-1])
+                                'PRE': np.array(PRE_SCORE_mean[::-1]),
+                                'REC': np.array(REC_SCORE_mean[::-1]),
+                                'logloss': np.array(logloss_mean[::-1])
                                }
 
             self.std_score_ = {
                                 'ACC': np.array(ACC_SCORE_std[::-1]),
                                 'ROC_AUC': np.array(ROC_AUC_std[::-1]),
-                                'F1':np.array(F1_SCORE_std[::-1]),
-                                'PRE':np.array(PRE_SCORE_std[::-1]),
-                                'REC':np.array(REC_SCORE_std[::-1]),
-                                'logloss':np.array(logloss_std[::-1])
+                                'F1': np.array(F1_SCORE_std[::-1]),
+                                'PRE': np.array(PRE_SCORE_std[::-1]),
+                                'REC': np.array(REC_SCORE_std[::-1]),
+                                'logloss': np.array(logloss_std[::-1])
                               }
 
             self.questions_ = Questions[::-1]
-
 
     def select_num_Q(self, threshold, score = 'ROC_AUC'):
         try:
@@ -300,14 +289,13 @@ class Resampled_RFECV:
         except:
             print('Error')
 
-
     def draw_figure(self, X, y, ymin=0.0, ymax=1.0, fill_btw=True):
         """設問数と精度の関係を描画"""
     #    No_of_Q = np.where(rfecv.mean_score_['ROC_AUC'] > 0.8)[0][0] + 1
     #    No_of_Q = rfecv.select_num_Q(Threshold)
 
         plt.clf()
-        fig = plt.figure(figsize=(8,5), facecolor='w')
+        fig = plt.figure(figsize=(8, 5), facecolor='w')
 
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['ACC'], '-', label='Accuracy')
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['ROC_AUC'], '-', label='ROC AUC')
@@ -316,7 +304,7 @@ class Resampled_RFECV:
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['REC'], '--', label='Recall Score')
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['logloss'], '--', label='logloss')
 
-        if fill_btw == True:
+        if fill_btw is True:
             plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
                              self.mean_score_['ACC'] + self.std_score_['ACC'],
                              self.mean_score_['ACC'] - self.std_score_['ACC'],
@@ -393,7 +381,7 @@ class BalancedBagging_Valudation:
         self.X_set = 'No Value'
         self.Y_set = 'No Value'
 
-        self.flod = KFold(self.cv, random_state=71)
+        self.flod = StratifiedKFold(self.cv)
 
     def fit(self, X_train, y_train):
 
@@ -409,7 +397,7 @@ class BalancedBagging_Valudation:
 
         k = 1
 
-        if self.verbose == True:
+        if self.verbose is True:
             print("Checking Cross Validation Score with Balanced Bagging: %d splits" % self.cv)
         else:
             pass
@@ -421,7 +409,7 @@ class BalancedBagging_Valudation:
             y_te = y_train.values[test_index]
 
             sts = StandardScaler()
-            clf = xgb.XGBClassifier(n_jobs = self.n_jobs)
+            clf = xgb.XGBClassifier(n_jobs=self.n_jobs)
             usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
             pipe = make_pipeline(sts, usbc)
 
@@ -438,8 +426,8 @@ class BalancedBagging_Valudation:
             test_set_X.append(x_ta)
             test_set_Y.append(y_ta)
 
-            if self.verbose == True:
-                print ("Done: %d, Totaling: %d" % (k, self.cv))
+            if self.verbose is True:
+                print("Done: %d, Totaling: %d" % (k, self.cv))
             else:
                 pass
 
@@ -455,19 +443,18 @@ class BalancedBagging_Valudation:
         self.X_set = test_set_X
         self.Y_set = test_set_Y
 
-
     def predict(self, X_test):
         best_estimator = np.where(self.acc_ == self.acc_.max())[0][0]
 
         sts = StandardScaler()
-        clf = xgb.XGBClassifier(n_jobs = self.n_jobs)
+        clf = xgb.XGBClassifier(n_jobs=self.n_jobs)
         usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
         pipe = make_pipeline(sts, usbc)
 
         pipe.fit(self.X_set[best_estimator], self.Y_set[best_estimator])
         Y_pred = pipe.predict(X_test)
 
-        return  Y_pred
+        return Y_pred
 
 
 def Check_TestData(X_train, y_train, X_test, y_test):
