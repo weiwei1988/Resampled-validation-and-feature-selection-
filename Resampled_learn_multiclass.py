@@ -20,7 +20,7 @@ warnings.filterwarnings('ignore')
 
 class Resampled_Cross_Validate:
 
-    def __init__(self, n_splits, sampler=RandomUnderSampler(ratio='not minority'), estimator=xgb.XGBClassifier(n_jobs=-1), average = 'micro', verbose=True):
+    def __init__(self, n_splits, sampler=RandomUnderSampler(ratio='not minority'), estimator=xgb.XGBClassifier(n_jobs=-1), average='micro', verbose=True):
         self.n_splits = n_splits
         self.verbose = verbose
         self.sampler = sampler
@@ -65,7 +65,7 @@ class Resampled_Cross_Validate:
 
             try:
                 x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
-            except:
+            except ValueError:
                 print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
             sts = StandardScaler()
@@ -75,7 +75,7 @@ class Resampled_Cross_Validate:
                 pipe.fit(x_ta_resampled, y_ta_resampled)
                 y_pred = pipe.predict(x_te)
                 y_prob = pipe.predict_proba(x_te)
-            except:
+            except ValueError:
                 print('Error on estimator, Please use right estimator for multiclass classification')
 
             matrix.append(confusion_matrix(y_te, y_pred))
@@ -86,7 +86,7 @@ class Resampled_Cross_Validate:
             logloss.append(log_loss(y_te, y_prob))
 
             if self.verbose is True:
-                print ("Done: %d, Totaling: %d" % (k, self.n_splits))
+                print("Done: %d, Totaling: %d" % (k, self.n_splits))
             else:
                 pass
 
@@ -136,7 +136,7 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
 
         try:
             x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
-        except:
+        except ValueError:
             print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
         sts = StandardScaler()
@@ -149,7 +149,7 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
             estimator.fit(x_ta_resampled, y_ta_resampled)
             y_pred = estimator.predict(x_te)
             y_prob = estimator.predict_proba(x_te)
-        except:
+        except ValueError:
             print('Error on estimator. Please use right estimator for multiclass classification')
 
         ACC.append(accuracy_score(y_te, y_pred))
@@ -164,16 +164,16 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
 
             elif hasattr(estimator, 'coef_') is True:
                 c = np.power(estimator.coef_, 2)
-                feature_im = np.sum(c, axis=0)
+                feature_im = np.sqrt(np.sum(c, axis=0))
                 Importance_Score.append(feature_im)
 
             elif hasattr(estimator, 'dual_coef_') is True:
                 w = np.matmul(estimator.dual_coef_, estimator.support_vectors_)
                 c = np.power(w, 2)
-                feature_im = np.sum(c, axis=0)
+                feature_im = np.sqrt(np.sum(c, axis=0))
                 Importance_Score.append(feature_im)
 
-        except:
+        except ValueError:
             print('Error on getting feature importance. Please use estimators with atrribute "coef_" or "feature_importances_"')
 
         if verbose is True:
@@ -288,14 +288,14 @@ class Resampled_RFECV:
                 Num_Q = np.where(self.mean_score_[score] > threshold)[0][0] + 1
 
             return Num_Q
-        except:
+        except ValueError:
             print('Error')
 
     def draw_figure(self, X, y, ymin=0.0, ymax=1.0, fill_btw=True):
         """設問数と精度の関係を描画"""
 
         plt.clf()
-        fig = plt.figure(figsize=(8,5), facecolor='w')
+        fig = plt.figure(figsize=(8, 5), facecolor='w')
 
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['ACC'], '-', label='Accuracy')
         plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['F1'], '--', label='F1 Score_'+str(self.average))
@@ -344,7 +344,7 @@ class Resampled_RFECV:
         df = df.sort_values(by='Score', ascending=True)
 
         plt.clf()
-        fig = plt.figure(figsize=(8,5), facecolor='w')
+        fig = plt.figure(figsize=(8, 5), facecolor='w')
 
         plt.barh(range(len(X.columns)), df.Score, align='center', color='r')
         plt.xticks(fontsize=10)

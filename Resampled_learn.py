@@ -160,12 +160,12 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
                 Importance_Score.append(estimator.feature_importances_)
 
             elif hasattr(estimator, 'coef_') is True:
-                feature_im = np.sqrt(np.abs(estimator.coef_)).ravel()
+                feature_im = np.abs(estimator.coef_).ravel()
                 Importance_Score.append(feature_im)
 
             elif hasattr(estimator, 'dual_coef_') is True:
                 w = np.matmul(estimator.dual_coef_, estimator.support_vectors_).transpose()
-                feature_im = np.sqrt(np.abs(w))
+                feature_im = np.abs(w)
                 Importance_Score.append(feature_im)
 
         except ValueError:
@@ -290,9 +290,6 @@ class Resampled_RFECV:
 
     def draw_figure(self, X, y, ymin=0.0, ymax=1.0, fill_btw=True):
         """設問数と精度の関係を描画"""
-    #    No_of_Q = np.where(rfecv.mean_score_['ROC_AUC'] > 0.8)[0][0] + 1
-    #    No_of_Q = rfecv.select_num_Q(Threshold)
-
         plt.clf()
         fig = plt.figure(figsize=(8, 5), facecolor='w')
 
@@ -349,7 +346,7 @@ class Resampled_RFECV:
         df = df.sort_values(by='Score', ascending=True)
 
         plt.clf()
-        fig = plt.figure(figsize=(8,5), facecolor='w')
+        fig = plt.figure(figsize=(8, 5), facecolor='w')
 
         plt.barh(range(len(X.columns)), df.Score, align='center', color='r')
         plt.xticks(fontsize=10)
