@@ -373,6 +373,7 @@ class BalancedBagging_Valudation:
         self.rec_ = 'No Value'
         self.f1_ = 'No Value'
         self.roc_auc_ = 'No Value'
+        self.logloss_ = 'No Value'
 
         self.X_set = 'No Value'
         self.Y_set = 'No Value'
@@ -387,6 +388,7 @@ class BalancedBagging_Valudation:
         REC = []
         F1 = []
         ROC_AUC = []
+        logloss = []
 
         test_set_X = []
         test_set_Y = []
@@ -411,6 +413,7 @@ class BalancedBagging_Valudation:
 
             pipe.fit(x_ta, y_ta)
             y_pred = pipe.predict(x_te)
+            y_prob = pipe.predict_proba(x_te)
 
             matrix.append(confusion_matrix(y_te, y_pred))
             ACC.append(accuracy_score(y_te, y_pred))
@@ -418,6 +421,7 @@ class BalancedBagging_Valudation:
             REC.append(recall_score(y_te, y_pred))
             F1.append(f1_score(y_te, y_pred))
             ROC_AUC.append(roc_auc_score(y_te, y_pred))
+            logloss.append(log_loss(y_te, y_prob))
 
             test_set_X.append(x_ta)
             test_set_Y.append(y_ta)
@@ -435,6 +439,7 @@ class BalancedBagging_Valudation:
         self.rec_ = np.array(REC)
         self.f1_ = np.array(F1)
         self.roc_auc_ = np.array(ROC_AUC)
+        self.logloss_ = np.array(logloss)
 
         self.X_set = test_set_X
         self.Y_set = test_set_Y
@@ -459,6 +464,7 @@ def Check_TestData(X_train, y_train, X_test, y_test):
     REC = []
     F1 = []
     ROC_AUC = []
+    logloss = []
 
     print("Checking Test Score with Balanced Bagging")
 
@@ -469,11 +475,13 @@ def Check_TestData(X_train, y_train, X_test, y_test):
 
     pipe.fit(X_train, y_train)
     y_pred = pipe.predict(X_test)
+    y_prob = pipe.predict_proba(X_test)
 
     matrix = confusion_matrix(y_test, y_pred)
     PRE = precision_score(y_test, y_pred)
     REC = recall_score(y_test, y_pred)
     F1 = f1_score(y_test, y_pred)
     ROC_AUC = roc_auc_score(y_test, y_pred)
+    logloss = np.array(log_loss(y_test, y_prob))
 
-    return matrix, PRE, REC, F1, ROC_AUC
+    return matrix, PRE, REC, F1, ROC_AUC, logloss
