@@ -280,7 +280,7 @@ class Resampled_RFECV:
 
             self.questions_ = Questions[::-1]
 
-    def select_num_Q(self, threshold, score ='ACC'):
+    def select_num_Q(self, threshold, score='ACC'):
         try:
             if score is 'logloss':
                 Num_Q = np.where(self.mean_score_[score] < threshold)[0][0] + 1
