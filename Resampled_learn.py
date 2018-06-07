@@ -178,7 +178,9 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
 
         k += 1
 
-    return np.array(ACC), np.array(ROC_AUC), np.array(F1), np.array(PRE), np.array(REC), np.array(logloss), get_importance_score(X_train, sum(Importance_Score) / n_splits)
+        out_score = get_importance_score(X_train, sum(Importance_Score) / n_splits)
+
+    return np.array(ACC), np.array(ROC_AUC), np.array(F1), np.array(PRE), np.array(REC), np.array(logloss), out_score
 
 
 class Resampled_RFECV:
@@ -235,7 +237,11 @@ class Resampled_RFECV:
                 else:
                     pass
 
-                ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y, sampler=self.sampler, estimator=self.estimator, n_splits=self.cv, verbose=self.verbose)
+                ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y,
+                                                                                           sampler=self.sampler,
+                                                                                           estimator=self.estimator,
+                                                                                           n_splits=self.cv,
+                                                                                           verbose=self.verbose)
                 IM_score = IM_score.sort_values(by='Score').reset_index(drop=True)
                 IM_new = IM_score.drop(range(self.n_steps))
 
@@ -327,8 +333,8 @@ class Resampled_RFECV:
                              alpha=0.15)
 
             plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
-                            self.mean_score_['logloss'] + self.std_score_['logloss'],
-                            self.mean_score_['logloss'] - self.std_score_['logloss'],
+                             self.mean_score_['logloss'] + self.std_score_['logloss'],
+                             self.mean_score_['logloss'] - self.std_score_['logloss'],
                              alpha=0.15)
         else:
             pass
