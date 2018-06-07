@@ -20,8 +20,7 @@ warnings.filterwarnings('ignore')
 
 class Resampled_Cross_Validate:
 
-    def __init__(self, cv,
-                sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), verbose=True):
+    def __init__(self, cv, sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), verbose=True):
         self.cv = cv
         self.verbose = verbose
         self.sampler = sampler
@@ -62,7 +61,7 @@ class Resampled_Cross_Validate:
             try:
                 x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(x_ta, y_ta)
 
-            except:
+            except ValueError:
                 print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
             sts = StandardScaler()
@@ -74,7 +73,7 @@ class Resampled_Cross_Validate:
                 y_pred = pipe.predict(x_te)
                 y_prob = pipe.predict_proba(x_te)
 
-            except:
+            except ValueError:
                 print('Error on estimator, Please use right estimator for multiclass classification')
 
             matrix.append(confusion_matrix(y_te, y_pred))
@@ -132,7 +131,7 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
         try:
             x_ta_resampled, y_ta_resampled = sampler.fit_sample(x_ta, y_ta)
 
-        except:
+        except ValueError:
             print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
         sts = StandardScaler()
@@ -146,7 +145,7 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
             y_pred = estimator.predict(x_te)
             y_prob = estimator.predict_proba(x_te)
 
-        except:
+        except ValueError:
             print('Error on estimator. Please use right estimator for multiclass classification')
 
         ACC.append(accuracy_score(y_te, y_pred))
@@ -161,15 +160,15 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
                 Importance_Score.append(estimator.feature_importances_)
 
             elif hasattr(estimator, 'coef_') is True:
-                feature_im = np.abs(estimator.coef_).ravel()
+                feature_im = np.sqrt(np.abs(estimator.coef_)).ravel()
                 Importance_Score.append(feature_im)
 
             elif hasattr(estimator, 'dual_coef_') is True:
                 w = np.matmul(estimator.dual_coef_, estimator.support_vectors_).transpose()
-                feature_im = np.abs(w)
+                feature_im = np.sqrt(np.abs(w))
                 Importance_Score.append(feature_im)
 
-        except:
+        except ValueError:
             print('Error on getting feature importance. Please use estimators with atrribute "coef_" or "feature_importances_"')
 
         if verbose is True:
@@ -278,7 +277,7 @@ class Resampled_RFECV:
 
             self.questions_ = Questions[::-1]
 
-    def select_num_Q(self, threshold, score = 'ROC_AUC'):
+    def select_num_Q(self, threshold, score='ROC_AUC'):
         try:
             if score != 'logloss':
                 Num_Q = np.where(self.mean_score_[score] > threshold)[0][0] + 1
@@ -286,7 +285,7 @@ class Resampled_RFECV:
             else:
                 Num_Q = np.where(self.mean_score_[score] < threshold)[0][0] + 1
                 return Num_Q
-        except:
+        except ValueError:
             print('Error')
 
     def draw_figure(self, X, y, ymin=0.0, ymax=1.0, fill_btw=True):
@@ -337,9 +336,9 @@ class Resampled_RFECV:
         else:
             pass
 
-        plt.xlabel('No. of Features Selected', fontsize = 12)
-        plt.ylabel('Validation Score (CV=%d)' % self.cv, fontsize = 12)
-        plt.title('Score curve', fontsize = 14)
+        plt.xlabel('No. of Features Selected', fontsize=12)
+        plt.ylabel('Validation Score (CV=%d)' % self.cv, fontsize=12)
+        plt.title('Score curve', fontsize=14)
         plt.ylim(ymin, ymax)
         plt.legend(loc='best', fontsize=8)
         plt.show()
