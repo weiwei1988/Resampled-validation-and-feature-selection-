@@ -51,7 +51,8 @@ class Resampled_Cross_Validate:
         flod = StratifiedKFold(n_splits=self.n_splits)
 
         if self.verbose is True:
-            print("Start Processing Resampled Validation: %d splits" % self.n_splits)
+            print("Start Processing Resampled Validation: %d splits" %
+                  self.n_splits)
         else:
             pass
 
@@ -66,7 +67,8 @@ class Resampled_Cross_Validate:
             try:
                 x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
             except ValueError:
-                print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+                print(
+                    'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
             sts = StandardScaler()
             pipe = make_pipeline(sts, self.estimator)
@@ -76,7 +78,8 @@ class Resampled_Cross_Validate:
                 y_pred = pipe.predict(x_te)
                 y_prob = pipe.predict_proba(x_te)
             except ValueError:
-                print('Error on estimator, Please use right estimator for multiclass classification')
+                print(
+                    'Error on estimator, Please use right estimator for multiclass classification')
 
             matrix.append(confusion_matrix(y_te, y_pred))
             ACC.append(accuracy_score(y_te, y_pred))
@@ -137,7 +140,8 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
         try:
             x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
         except ValueError:
-            print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+            print(
+                'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
         sts = StandardScaler()
 
@@ -150,7 +154,8 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
             y_pred = estimator.predict(x_te)
             y_prob = estimator.predict_proba(x_te)
         except ValueError:
-            print('Error on estimator. Please use right estimator for multiclass classification')
+            print(
+                'Error on estimator. Please use right estimator for multiclass classification')
 
         ACC.append(accuracy_score(y_te, y_pred))
         F1.append(f1_score(y_te, y_pred, average=average))
@@ -225,10 +230,12 @@ class Resampled_RFECV:
             X_new = X
 
             "計算ステップリストの用意"
-            step = np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps)[::-1]
+            step = np.arange(self.n_steps, len(X.columns) +
+                             self.n_steps, self.n_steps)[::-1]
 
             if self.verbose is True:
-                print("Start Processing Resampled Feature Selection: %d Steps" % len(step))
+                print(
+                    "Start Processing Resampled Feature Selection: %d Steps" % len(step))
             else:
                 pass
 
@@ -244,7 +251,8 @@ class Resampled_RFECV:
                                                                                   n_splits=self.cv,
                                                                                   verbose=self.verbose)
 
-                IM_new = IM_score.sort_values(by='Score').reset_index(drop=True).drop(range(self.n_steps))
+                IM_new = IM_score.sort_values(by='Score').reset_index(
+                    drop=True).drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
                 F1_SCORE_mean.append(F1.mean())
@@ -263,20 +271,20 @@ class Resampled_RFECV:
                 Questions.append(IM_score)
 
             self.mean_score_ = {
-                                'ACC': np.array(ACC_SCORE_mean[::-1]),
-                                'F1': np.array(F1_SCORE_mean[::-1]),
-                                'PRE': np.array(PRE_SCORE_mean[::-1]),
-                                'REC': np.array(REC_SCORE_mean[::-1]),
-                                'logloss': np.array(logloss_mean[::-1])
-                               }
+                'ACC': np.array(ACC_SCORE_mean[::-1]),
+                'F1': np.array(F1_SCORE_mean[::-1]),
+                'PRE': np.array(PRE_SCORE_mean[::-1]),
+                'REC': np.array(REC_SCORE_mean[::-1]),
+                'logloss': np.array(logloss_mean[::-1])
+            }
 
             self.std_score_ = {
-                                'ACC': np.array(ACC_SCORE_std[::-1]),
-                                'F1': np.array(F1_SCORE_std[::-1]),
-                                'PRE': np.array(PRE_SCORE_std[::-1]),
-                                'REC': np.array(REC_SCORE_std[::-1]),
-                                'logloss': np.array(logloss_std[::-1])
-                              }
+                'ACC': np.array(ACC_SCORE_std[::-1]),
+                'F1': np.array(F1_SCORE_std[::-1]),
+                'PRE': np.array(PRE_SCORE_std[::-1]),
+                'REC': np.array(REC_SCORE_std[::-1]),
+                'logloss': np.array(logloss_std[::-1])
+            }
 
             self.questions_ = Questions[::-1]
 
@@ -297,36 +305,43 @@ class Resampled_RFECV:
         plt.clf()
         fig = plt.figure(figsize=(8, 5), facecolor='w')
 
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['ACC'], '-', label='Accuracy')
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['F1'], '--', label='F1 Score_'+str(self.average))
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['PRE'], '--', label='Precision Score_'+str(self.average))
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['REC'], '--', label='Recall Score_'+str(self.average))
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['logloss'], '--', label='Log Loss')
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps,
+                           self.n_steps), self.mean_score_['ACC'], '-', label='Accuracy')
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
+                 self.mean_score_['F1'], '--', label='F1 Score_' + str(self.average))
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
+                 self.mean_score_['PRE'], '--', label='Precision Score_' + str(self.average))
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
+                 self.mean_score_['REC'], '--', label='Recall Score_' + str(self.average))
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps,
+                           self.n_steps), self.mean_score_['logloss'], '--', label='Log Loss')
 
         if fill_btw is True:
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
                              self.mean_score_['ACC'] + self.std_score_['ACC'],
                              self.mean_score_['ACC'] - self.std_score_['ACC'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
                              self.mean_score_['F1'] + self.std_score_['F1'],
                              self.mean_score_['F1'] - self.std_score_['F1'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
                              self.mean_score_['PRE'] + self.std_score_['PRE'],
                              self.mean_score_['PRE'] - self.std_score_['PRE'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
                              self.mean_score_['REC'] + self.std_score_['REC'],
                              self.mean_score_['REC'] - self.std_score_['REC'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
-                             self.mean_score_['logloss'] + self.std_score_['logloss'],
-                             self.mean_score_['logloss'] - self.std_score_['logloss'],
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
+                             self.mean_score_['logloss'] +
+                             self.std_score_['logloss'],
+                             self.mean_score_['logloss'] -
+                             self.std_score_['logloss'],
                              alpha=0.15)
         else:
             pass
@@ -340,7 +355,7 @@ class Resampled_RFECV:
 
     def draw_barchart(self, X, y):
 
-        df = self.questions_[len(X.columns)-1]
+        df = self.questions_[len(X.columns) - 1]
         df = df.sort_values(by='Score', ascending=True)
 
         plt.clf()
@@ -393,7 +408,8 @@ class BalancedBagging_Valudation:
         k = 1
 
         if self.verbose is True:
-            print("Checking Cross Validation Score with Balanced Bagging: %d splits" % self.cv)
+            print(
+                "Checking Cross Validation Score with Balanced Bagging: %d splits" % self.cv)
         else:
             pass
 
@@ -405,7 +421,8 @@ class BalancedBagging_Valudation:
 
             sts = StandardScaler()
             clf = xgb.XGBClassifier(n_jobs=self.n_jobs)
-            usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
+            usbc = BalancedBaggingClassifier(
+                base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
             pipe = make_pipeline(sts, usbc)
 
             pipe.fit(x_ta, y_ta)
@@ -444,7 +461,8 @@ class BalancedBagging_Valudation:
 
         sts = StandardScaler()
         clf = xgb.XGBClassifier(n_jobs=self.n_jobs)
-        usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
+        usbc = BalancedBaggingClassifier(
+            base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
         pipe = make_pipeline(sts, usbc)
 
         pipe.fit(self.X_set[best_estimator], self.Y_set[best_estimator])
@@ -464,7 +482,8 @@ def Check_TestData(X_train, y_train, X_test, y_test):
 
     sts = StandardScaler()
     clf = xgb.XGBClassifier(n_jobs=-1)
-    usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=-1, n_estimators=10, ratio='not minority')
+    usbc = BalancedBaggingClassifier(
+        base_estimator=clf, n_jobs=-1, n_estimators=10, ratio='not minority')
     pipe = make_pipeline(sts, usbc)
 
     pipe.fit(X_train, y_train)
