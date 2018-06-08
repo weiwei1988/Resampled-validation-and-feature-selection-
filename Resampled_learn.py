@@ -59,10 +59,12 @@ class Resampled_Cross_Validate:
             y_te = y_train.values[test_index]
 
             try:
-                x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(x_ta, y_ta)
+                x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(
+                    x_ta, y_ta)
 
             except ValueError:
-                print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+                print(
+                    'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
             sts = StandardScaler()
             clf = xgb.XGBClassifier()
@@ -74,7 +76,8 @@ class Resampled_Cross_Validate:
                 y_prob = pipe.predict_proba(x_te)
 
             except ValueError:
-                print('Error on estimator, Please use right estimator for multiclass classification')
+                print(
+                    'Error on estimator, Please use right estimator for multiclass classification')
 
             matrix.append(confusion_matrix(y_te, y_pred))
             ACC.append(accuracy_score(y_te, y_pred))
@@ -132,7 +135,8 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
             x_ta_resampled, y_ta_resampled = sampler.fit_sample(x_ta, y_ta)
 
         except ValueError:
-            print('Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+            print(
+                'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
 
         sts = StandardScaler()
 
@@ -146,7 +150,8 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
             y_prob = estimator.predict_proba(x_te)
 
         except ValueError:
-            print('Error on estimator. Please use right estimator for multiclass classification')
+            print(
+                'Error on estimator. Please use right estimator for multiclass classification')
 
         ACC.append(accuracy_score(y_te, y_pred))
         ROC_AUC.append(roc_auc_score(y_te, y_pred))
@@ -164,7 +169,8 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
                 Importance_Score.append(feature_im)
 
             elif hasattr(estimator, 'dual_coef_') is True:
-                w = np.matmul(estimator.dual_coef_, estimator.support_vectors_).transpose()
+                w = np.matmul(estimator.dual_coef_,
+                              estimator.support_vectors_).transpose()
                 feature_im = np.abs(w)
                 Importance_Score.append(feature_im)
 
@@ -178,7 +184,8 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
 
         k += 1
 
-        out_score = get_importance_score(X_train, sum(Importance_Score) / n_splits)
+        out_score = get_importance_score(
+            X_train, sum(Importance_Score) / n_splits)
 
     return np.array(ACC), np.array(ROC_AUC), np.array(F1), np.array(PRE), np.array(REC), np.array(logloss), out_score
 
@@ -223,10 +230,12 @@ class Resampled_RFECV:
             X_new = X
 
             "計算ステップリストの用意"
-            step = np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps)[::-1]
+            step = np.arange(self.n_steps, len(X.columns) +
+                             self.n_steps, self.n_steps)[::-1]
 
             if self.verbose is True:
-                print("Start Processing Resampled Feature Selection: %d Steps" % len(step))
+                print(
+                    "Start Processing Resampled Feature Selection: %d Steps" % len(step))
             else:
                 pass
 
@@ -242,7 +251,8 @@ class Resampled_RFECV:
                                                                                            estimator=self.estimator,
                                                                                            n_splits=self.cv,
                                                                                            verbose=self.verbose)
-                IM_score = IM_score.sort_values(by='Score').reset_index(drop=True)
+                IM_score = IM_score.sort_values(
+                    by='Score').reset_index(drop=True)
                 IM_new = IM_score.drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
@@ -264,22 +274,22 @@ class Resampled_RFECV:
                 Questions.append(IM_score)
 
             self.mean_score_ = {
-                                'ACC': np.array(ACC_SCORE_mean[::-1]),
-                                'ROC_AUC': np.array(ROC_AUC_mean[::-1]),
-                                'F1': np.array(F1_SCORE_mean[::-1]),
-                                'PRE': np.array(PRE_SCORE_mean[::-1]),
-                                'REC': np.array(REC_SCORE_mean[::-1]),
-                                'logloss': np.array(logloss_mean[::-1])
-                               }
+                'ACC': np.array(ACC_SCORE_mean[::-1]),
+                'ROC_AUC': np.array(ROC_AUC_mean[::-1]),
+                'F1': np.array(F1_SCORE_mean[::-1]),
+                'PRE': np.array(PRE_SCORE_mean[::-1]),
+                'REC': np.array(REC_SCORE_mean[::-1]),
+                'logloss': np.array(logloss_mean[::-1])
+            }
 
             self.std_score_ = {
-                                'ACC': np.array(ACC_SCORE_std[::-1]),
-                                'ROC_AUC': np.array(ROC_AUC_std[::-1]),
-                                'F1': np.array(F1_SCORE_std[::-1]),
-                                'PRE': np.array(PRE_SCORE_std[::-1]),
-                                'REC': np.array(REC_SCORE_std[::-1]),
-                                'logloss': np.array(logloss_std[::-1])
-                              }
+                'ACC': np.array(ACC_SCORE_std[::-1]),
+                'ROC_AUC': np.array(ROC_AUC_std[::-1]),
+                'F1': np.array(F1_SCORE_std[::-1]),
+                'PRE': np.array(PRE_SCORE_std[::-1]),
+                'REC': np.array(REC_SCORE_std[::-1]),
+                'logloss': np.array(logloss_std[::-1])
+            }
 
             self.questions_ = Questions[::-1]
 
@@ -299,42 +309,52 @@ class Resampled_RFECV:
         plt.clf()
         fig = plt.figure(figsize=(8, 5), facecolor='w')
 
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['ACC'], '-', label='Accuracy')
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['ROC_AUC'], '-', label='ROC AUC')
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['F1'], '--', label='F1 Score')
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['PRE'], '--', label='Precision Score')
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['REC'], '--', label='Recall Score')
-        plt.plot(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps), self.mean_score_['logloss'], '--', label='logloss')
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps,
+                           self.n_steps), self.mean_score_['ACC'], '-', label='Accuracy')
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps,
+                           self.n_steps), self.mean_score_['ROC_AUC'], '-', label='ROC AUC')
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps,
+                           self.n_steps), self.mean_score_['F1'], '--', label='F1 Score')
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps,
+                           self.n_steps), self.mean_score_['PRE'], '--', label='Precision Score')
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps,
+                           self.n_steps), self.mean_score_['REC'], '--', label='Recall Score')
+        plt.plot(np.arange(self.n_steps, len(X.columns) + self.n_steps,
+                           self.n_steps), self.mean_score_['logloss'], '--', label='logloss')
 
         if fill_btw is True:
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
                              self.mean_score_['ACC'] + self.std_score_['ACC'],
                              self.mean_score_['ACC'] - self.std_score_['ACC'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
-                             self.mean_score_['ROC_AUC'] + self.std_score_['ROC_AUC'],
-                             self.mean_score_['ROC_AUC'] - self.std_score_['ROC_AUC'],
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
+                             self.mean_score_['ROC_AUC'] +
+                             self.std_score_['ROC_AUC'],
+                             self.mean_score_['ROC_AUC'] -
+                             self.std_score_['ROC_AUC'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
                              self.mean_score_['F1'] + self.std_score_['F1'],
                              self.mean_score_['F1'] - self.std_score_['F1'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
                              self.mean_score_['PRE'] + self.std_score_['PRE'],
                              self.mean_score_['PRE'] - self.std_score_['PRE'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
                              self.mean_score_['REC'] + self.std_score_['REC'],
                              self.mean_score_['REC'] - self.std_score_['REC'],
                              alpha=0.15)
 
-            plt.fill_between(np.arange(self.n_steps, len(X.columns)+self.n_steps, self.n_steps),
-                             self.mean_score_['logloss'] + self.std_score_['logloss'],
-                             self.mean_score_['logloss'] - self.std_score_['logloss'],
+            plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
+                             self.mean_score_['logloss'] +
+                             self.std_score_['logloss'],
+                             self.mean_score_['logloss'] -
+                             self.std_score_['logloss'],
                              alpha=0.15)
         else:
             pass
@@ -348,7 +368,7 @@ class Resampled_RFECV:
 
     def draw_barchart(self, X, y):
 
-        df = self.questions_[len(X.columns)-1]
+        df = self.questions_[len(X.columns) - 1]
         df = df.sort_values(by='Score', ascending=True)
 
         plt.clf()
@@ -402,7 +422,8 @@ class BalancedBagging_Valudation:
         k = 1
 
         if self.verbose is True:
-            print("Checking Cross Validation Score with Balanced Bagging: %d splits" % self.cv)
+            print(
+                "Checking Cross Validation Score with Balanced Bagging: %d splits" % self.cv)
         else:
             pass
 
@@ -414,7 +435,8 @@ class BalancedBagging_Valudation:
 
             sts = StandardScaler()
             clf = xgb.XGBClassifier(n_jobs=self.n_jobs)
-            usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
+            usbc = BalancedBaggingClassifier(
+                base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
             pipe = make_pipeline(sts, usbc)
 
             pipe.fit(x_ta, y_ta)
@@ -455,7 +477,8 @@ class BalancedBagging_Valudation:
 
         sts = StandardScaler()
         clf = xgb.XGBClassifier(n_jobs=self.n_jobs)
-        usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
+        usbc = BalancedBaggingClassifier(
+            base_estimator=clf, n_jobs=self.n_jobs, n_estimators=self.n_estimators, ratio='not minority')
         pipe = make_pipeline(sts, usbc)
 
         pipe.fit(self.X_set[best_estimator], self.Y_set[best_estimator])
@@ -476,7 +499,8 @@ def Check_TestData(X_train, y_train, X_test, y_test):
 
     sts = StandardScaler()
     clf = xgb.XGBClassifier(n_jobs=-1)
-    usbc = BalancedBaggingClassifier(base_estimator=clf, n_jobs=-1, n_estimators=10, ratio='not minority')
+    usbc = BalancedBaggingClassifier(
+        base_estimator=clf, n_jobs=-1, n_estimators=10, ratio='not minority')
     pipe = make_pipeline(sts, usbc)
 
     pipe.fit(X_train, y_train)
