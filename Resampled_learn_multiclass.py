@@ -20,7 +20,14 @@ warnings.filterwarnings('ignore')
 
 class Resampled_Cross_Validate:
 
-    def __init__(self, n_splits, sampler=RandomUnderSampler(ratio='not minority'), estimator=xgb.XGBClassifier(n_jobs=-1), average='micro', verbose=True):
+    def __init__(self,
+                 n_splits,
+                 sampler=RandomUnderSampler(ratio='not minority'),
+                 estimator=xgb.XGBClassifier(n_jobs=-1),
+                 average='micro',
+                 verbose=True
+                 ):
+
         self.n_splits = n_splits
         self.verbose = verbose
         self.sampler = sampler
