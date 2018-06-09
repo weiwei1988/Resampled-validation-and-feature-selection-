@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import StratifiedKFold
 import xgboost as xgb
-from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score, accuracy_score, log_loss
+from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score, accuracy_score, log_loss
 from imblearn.over_sampling import RandomOverSampler, SMOTE
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.ensemble import BalancedBaggingClassifier
@@ -507,14 +507,12 @@ class Resampled_RFE:
         else:
             "結果格納用リストの生成"
             ACC_SCORE_mean = []
-            ROC_AUC_mean = []
             F1_SCORE_mean = []
             PRE_SCORE_mean = []
             REC_SCORE_mean = []
             logloss_mean = []
 
             ACC_SCORE_std = []
-            ROC_AUC_std = []
             F1_SCORE_std = []
             PRE_SCORE_std = []
             REC_SCORE_std = []
