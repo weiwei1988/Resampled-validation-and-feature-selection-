@@ -628,7 +628,8 @@ class Resampled_RFE:
             self.questions_ = Questions[::-1]
 
     def support(self):
-        df_t = pd.merge(self.questions_[self.n_feature_reduce - 1], self.questions_[0], on='Var', how='outer')
+        df_t = pd.merge(self.questions_[
+                        self.n_feature_reduce - 1], self.questions_[0], on='Var', how='outer')
         df_result = pd.concat([df_t['Var'], df_t['Score_y'].notnull()], axis=1)
         df_result.columns = ['Var', 'Support']
 
