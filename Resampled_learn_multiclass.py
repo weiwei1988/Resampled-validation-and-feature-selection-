@@ -478,28 +478,121 @@ class BalancedBagging_Valudation:
         return Y_pred
 
 
-def Check_TestData(X_train, y_train, X_test, y_test):
-    matrix = []
-    PRE = []
-    REC = []
-    F1 = []
-    ROC_AUC = []
+class Resampled_RFE:
 
-    print("Checking Test Score with Balanced Bagging")
+    def __init__(self, n_feature_select, n_steps, cv, sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), average='micro', verbose=False):
+        self.n_steps = n_steps
+        self.n_feature_select = n_feature_select
+        self.cv = cv
+        self.sampler = sampler
+        self.estimator = estimator
+        self.verbose = verbose
+        self.average = average
 
-    sts = StandardScaler()
-    clf = xgb.XGBClassifier(n_jobs=-1)
-    usbc = BalancedBaggingClassifier(
-        base_estimator=clf, n_jobs=-1, n_estimators=10, ratio='not minority')
-    pipe = make_pipeline(sts, usbc)
+        self.N_feature = 'No Value'
+        self.n_feature_reduce = 'No Value'
 
-    pipe.fit(X_train, y_train)
-    y_pred = pipe.predict(X_test)
+        self.mean_score_ = 'No Value'
+        self.std_score_ = 'No Value'
+        self.questions_ = 'No Value'
 
-    matrix = confusion_matrix(y_test, y_pred)
-    PRE = precision_score(y_test, y_pred)
-    REC = recall_score(y_test, y_pred)
-    F1 = f1_score(y_test, y_pred)
-    ROC_AUC = roc_auc_score(y_test, y_pred)
+    def fit(self, X, y):
+        self.N_feature = len(X.columns)
+        self.n_feature_reduce = self.N_feature - self.n_feature_select
 
-    return matrix, PRE, REC, F1, ROC_AUC
+        if self.n_feature_reduce % self.n_steps != 0:
+            print("Error: n_steps must be a divisior of %d" %
+                  self.n_feature_reduce)
+            raise 'Error'
+        else:
+            "結果格納用リストの生成"
+            ACC_SCORE_mean = []
+            ROC_AUC_mean = []
+            F1_SCORE_mean = []
+            PRE_SCORE_mean = []
+            REC_SCORE_mean = []
+            logloss_mean = []
+
+            ACC_SCORE_std = []
+            ROC_AUC_std = []
+            F1_SCORE_std = []
+            PRE_SCORE_std = []
+            REC_SCORE_std = []
+            logloss_std = []
+
+            Questions = []
+
+            "説明変数の初期化"
+            X_new = X
+
+            "計算ステップリストの用意"
+            step = np.arange(self.n_steps, self.n_feature_reduce +
+                             self.n_steps, self.n_steps)[::-1]
+
+            if self.verbose is True:
+                print(
+                    "Start Processing Resampled Feature Selection: %d Steps" % len(step))
+            else:
+                pass
+
+            for i in tqdm(range(len(step))):
+
+                if self.verbose is True:
+                    print("Fitting: %d features" % step[i])
+                else:
+                    pass
+
+                ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y,
+                                                                                           sampler=self.sampler,
+                                                                                           estimator=self.estimator,
+                                                                                           average=self.average
+                                                                                           n_splits=self.cv,
+                                                                                           verbose=self.verbose)
+                IM_score = IM_score.sort_values(
+                    by='Score').reset_index(drop=True)
+                IM_new = IM_score.drop(range(self.n_steps))
+
+                ACC_SCORE_mean.append(ACC.mean())
+                ROC_AUC_mean.append(ROC_AUC.mean())
+                F1_SCORE_mean.append(F1.mean())
+                PRE_SCORE_mean.append(PRE.mean())
+                REC_SCORE_mean.append(REC.mean())
+                logloss_mean.append(logloss.mean())
+
+                ACC_SCORE_std.append(ACC.std())
+                ROC_AUC_std.append(ROC_AUC.std())
+                F1_SCORE_std.append(F1.std())
+                PRE_SCORE_std.append(PRE.std())
+                REC_SCORE_std.append(REC.std())
+                logloss_std.append(logloss.std())
+
+                X_new = X_new.loc[:, IM_new.Var]
+
+                Questions.append(IM_score)
+
+            self.mean_score_ = {
+                'ACC': np.array(ACC_SCORE_mean[::-1]),
+                'ROC_AUC': np.array(ROC_AUC_mean[::-1]),
+                'F1': np.array(F1_SCORE_mean[::-1]),
+                'PRE': np.array(PRE_SCORE_mean[::-1]),
+                'REC': np.array(REC_SCORE_mean[::-1]),
+                'logloss': np.array(logloss_mean[::-1])
+            }
+
+            self.std_score_ = {
+                'ACC': np.array(ACC_SCORE_std[::-1]),
+                'ROC_AUC': np.array(ROC_AUC_std[::-1]),
+                'F1': np.array(F1_SCORE_std[::-1]),
+                'PRE': np.array(PRE_SCORE_std[::-1]),
+                'REC': np.array(REC_SCORE_std[::-1]),
+                'logloss': np.array(logloss_std[::-1])
+            }
+
+            self.questions_ = Questions[::-1]
+
+    def support(self):
+        df_t = pd.merge(self.questions_[self.n_feature_reduce - 1], self.questions_[0], on='Var', how='outer')
+        df_result = pd.concat([df_t['Var'], df_t['Score_y'].notnull()], axis=1)
+        df_result.columns = ['Var', 'Support']
+
+        return df_result
