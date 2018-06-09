@@ -516,6 +516,7 @@ def Check_TestData(X_train, y_train, X_test, y_test):
 
     return matrix, PRE, REC, F1, ROC_AUC, logloss
 
+
 class Resampled_RFE:
 
     def __init__(self, n_feature_select, n_steps, cv, sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), verbose=False):
@@ -538,7 +539,8 @@ class Resampled_RFE:
         self.n_feature_reduce = self.N_feature - self.n_feature_select
 
         if self.n_feature_reduce % self.n_steps != 0:
-            print("Error: n_steps must be a divisior of %d" % self.n_feature_reduce)
+            print("Error: n_steps must be a divisior of %d" %
+                  self.n_feature_reduce)
             raise 'Error'
         else:
             "結果格納用リストの生成"
@@ -583,7 +585,8 @@ class Resampled_RFE:
                                                                                            estimator=self.estimator,
                                                                                            n_splits=self.cv,
                                                                                            verbose=self.verbose)
-                IM_score = IM_score.sort_values(by='Score').reset_index(drop=True)
+                IM_score = IM_score.sort_values(
+                    by='Score').reset_index(drop=True)
                 IM_new = IM_score.drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
@@ -625,7 +628,7 @@ class Resampled_RFE:
             self.questions_ = Questions[::-1]
 
     def support(self):
-        df_t = pd.merge(self.questions_[self.n_feature_reduce-1], self.questions_[0], on='Var', how='outer')
+        df_t = pd.merge(self.questions_[self.n_feature_reduce - 1], self.questions_[0], on='Var', how='outer')
         df_result = pd.concat([df_t['Var'], df_t['Score_y'].notnull()], axis=1)
         df_result.columns = ['Var', 'Support']
 
