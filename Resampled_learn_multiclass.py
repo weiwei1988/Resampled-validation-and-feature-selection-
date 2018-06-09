@@ -545,7 +545,7 @@ class Resampled_RFE:
                 ACC, ROC_AUC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y,
                                                                                            sampler=self.sampler,
                                                                                            estimator=self.estimator,
-                                                                                           average=self.average
+                                                                                           average=self.average,
                                                                                            n_splits=self.cv,
                                                                                            verbose=self.verbose)
                 IM_score = IM_score.sort_values(
