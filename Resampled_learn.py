@@ -539,9 +539,7 @@ class Resampled_RFE:
         self.n_feature_reduce = self.N_feature - self.n_feature_select
 
         if self.n_feature_reduce % self.n_steps != 0:
-            print("Error: n_steps must be a divisior of %d" %
-                  self.n_feature_reduce)
-            raise 'Error'
+            raise ValueError('Error: n_steps must be a divisior of %d' % self.n_feature_reduce)
         else:
             "結果格納用リストの生成"
             ACC_SCORE_mean = []
