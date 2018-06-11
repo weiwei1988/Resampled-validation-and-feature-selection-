@@ -254,7 +254,8 @@ class Resampled_RFECV:
                     pass
 
                 ACC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y,
-                                                                                  sampler=self.sampler, estimator=self.estimator, average=self.average,
+                                                                                  sampler=self.sampler, estimator=self.estimator,
+                                                                                  average=self.average,
                                                                                   n_splits=self.cv,
                                                                                   verbose=self.verbose)
 
