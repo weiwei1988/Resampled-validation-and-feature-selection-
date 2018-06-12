@@ -200,7 +200,15 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
 
 class Resampled_RFECV:
 
-    def __init__(self, n_steps, cv, sampler=RandomUnderSampler(ratio='not minority'), estimator=xgb.XGBClassifier(n_jobs=-1), average='micro', verbose=False):
+    def __init__(self,
+                 n_steps,
+                 cv,
+                 sampler=RandomUnderSampler(ratio='not minority'),
+                 estimator=xgb.XGBClassifier(n_jobs=-1),
+                 average='micro',
+                 verbose=False
+                 ):
+
         self.n_steps = n_steps
         self.cv = cv
         self.sampler = sampler
@@ -481,7 +489,16 @@ class BalancedBagging_Valudation:
 
 class Resampled_RFE:
 
-    def __init__(self, n_feature_select, n_steps, cv, sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), average='micro', verbose=False):
+    def __init__(self,
+                 n_feature_select,
+                 n_steps,
+                 cv,
+                 sampler=RandomOverSampler(ratio='not minority'),
+                 estimator=xgb.XGBClassifier(),
+                 average='micro',
+                 verbose=False
+                 ):
+
         self.n_steps = n_steps
         self.n_feature_select = n_feature_select
         self.cv = cv
