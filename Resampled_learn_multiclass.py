@@ -572,16 +572,13 @@ class Resampled_RFE:
                 IM_new = IM_score.drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
-                ROC_AUC_mean.append(ROC_AUC.mean())
                 F1_SCORE_mean.append(F1.mean())
                 PRE_SCORE_mean.append(PRE.mean())
                 REC_SCORE_mean.append(REC.mean())
                 logloss_mean.append(logloss.mean())
 
                 ACC_SCORE_std.append(ACC.std())
-                ROC_AUC_std.append(ROC_AUC.std())
                 F1_SCORE_std.append(F1.std())
-                PRE_SCORE_std.append(PRE.std())
                 REC_SCORE_std.append(REC.std())
                 logloss_std.append(logloss.std())
 
