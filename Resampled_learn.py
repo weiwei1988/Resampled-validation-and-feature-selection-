@@ -519,7 +519,15 @@ def Check_TestData(X_train, y_train, X_test, y_test):
 
 class Resampled_RFE:
 
-    def __init__(self, n_feature_select, n_steps, cv, sampler=RandomOverSampler(ratio='not minority'), estimator=xgb.XGBClassifier(), verbose=False):
+    def __init__(self,
+                 n_feature_select,
+                 n_steps,
+                 cv,
+                 sampler=RandomOverSampler(ratio='not minority'),
+                 estimator=xgb.XGBClassifier(),
+                 verbose=False
+                 ):
+
         self.n_steps = n_steps
         self.n_feature_select = n_feature_select
         self.cv = cv
