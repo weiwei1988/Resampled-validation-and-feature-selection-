@@ -570,8 +570,7 @@ class Resampled_RFE:
             X_new = X
 
             "計算ステップリストの用意"
-            step = np.arange(self.n_steps, self.n_feature_reduce +
-                             self.n_steps, self.n_steps)[::-1]
+            step = np.arange(self.n_steps, self.n_feature_reduce+self.n_steps, self.n_steps)[::-1]
 
             if self.verbose is True:
                 print(
@@ -591,6 +590,9 @@ class Resampled_RFE:
                                                                                            estimator=self.estimator,
                                                                                            n_splits=self.cv,
                                                                                            verbose=self.verbose)
+                if i == 0:
+                    Questions.append(IM_score)
+                
                 IM_score = IM_score.sort_values(
                     by='Score').reset_index(drop=True)
                 IM_new = IM_score.drop(range(self.n_steps))
@@ -610,8 +612,9 @@ class Resampled_RFE:
                 logloss_std.append(logloss.std())
 
                 X_new = X_new.loc[:, IM_new.Var]
+                Questions.append(IM_new)
 
-                Questions.append(IM_score)
+               
 
             self.mean_score_ = {
                 'ACC': np.array(ACC_SCORE_mean[::-1]),
@@ -634,8 +637,7 @@ class Resampled_RFE:
             self.questions_ = Questions[::-1]
 
     def support(self):
-        df_t = pd.merge(self.questions_[
-                        self.n_feature_reduce - 1], self.questions_[0], on='Var', how='outer')
+        df_t = pd.merge(self.questions_[self.n_feature_reduce], self.questions_[0], on='Var', how='outer')
         df_result = pd.concat([df_t['Var'], df_t['Score_y'].notnull()], axis=1)
         df_result.columns = ['Var', 'Support']
 

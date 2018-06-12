@@ -564,25 +564,29 @@ class Resampled_RFE:
                                                                                   average=self.average,
                                                                                   n_splits=self.cv,
                                                                                   verbose=self.verbose)
+                if i == 0:
+                    Questions.append(IM_score)
+                
                 IM_score = IM_score.sort_values(
                     by='Score').reset_index(drop=True)
                 IM_new = IM_score.drop(range(self.n_steps))
 
                 ACC_SCORE_mean.append(ACC.mean())
+                ROC_AUC_mean.append(ROC_AUC.mean())
                 F1_SCORE_mean.append(F1.mean())
                 PRE_SCORE_mean.append(PRE.mean())
                 REC_SCORE_mean.append(REC.mean())
                 logloss_mean.append(logloss.mean())
 
                 ACC_SCORE_std.append(ACC.std())
+                ROC_AUC_std.append(ROC_AUC.std())
                 F1_SCORE_std.append(F1.std())
                 PRE_SCORE_std.append(PRE.std())
                 REC_SCORE_std.append(REC.std())
                 logloss_std.append(logloss.std())
 
                 X_new = X_new.loc[:, IM_new.Var]
-
-                Questions.append(IM_score)
+                Questions.append(IM_new)
 
             self.mean_score_ = {
                 'ACC': np.array(ACC_SCORE_mean[::-1]),
