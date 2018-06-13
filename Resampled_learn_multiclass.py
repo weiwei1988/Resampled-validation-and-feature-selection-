@@ -17,6 +17,7 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
+
 class Resampled_Prediction:
 
     def __init__(self,
@@ -31,7 +32,7 @@ class Resampled_Prediction:
         self.estimator = estimator
         self.verbose = verbose
         self.feature_importances_ = 'No Value'
-    
+
     def fit(self, X, y):
 
         X_resampled, y_resampled = self.sampler.fit_sample(X, y)
@@ -42,11 +43,17 @@ class Resampled_Prediction:
         self.feature_importances_ = self.estimator.feature_importances_
 
     def predict(self, X_test):
+
         return self.estimator.predict(self.scaler.transform(X_test))
-    
+
     def predict_proba(self, X_test):
+
         return self.estimator.predict_proba(self.scaler.transform(X_test))
-    
+
+    def score(self, X, y):
+
+        return self.estimator.score(self.scaler.transform(X), y)
+
 
 class Resampled_Cross_Validate:
 
@@ -596,7 +603,7 @@ class Resampled_RFE:
                                                                                   verbose=self.verbose)
                 if i == 0:
                     Questions.append(IM_score)
-                
+
                 IM_score = IM_score.sort_values(
                     by='Score').reset_index(drop=True)
                 IM_new = IM_score.drop(range(self.n_steps))
