@@ -17,6 +17,36 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
+class Resampled_Prediction:
+
+    def __init__(self,
+                 sampler=RandomUnderSampler(ratio='not minority'),
+                 scaler=StandardScaler(),
+                 estimator=xgb.XGBClassifier(),
+                 verbose=True
+                 ):
+
+        self.sampler = sampler
+        self.scaler = scaler
+        self.estimator = estimator
+        self.verbose = verbose
+        self.feature_importances_ = 'No Value'
+    
+    def fit(self, X, y):
+
+        X_resampled, y_resampled = self.sampler.fit_sample(X, y)
+        self.scaler.fit(X_resampled)
+        x_resampled = self.scaler.transform(X_resampled)
+        self.estimator.fit(x_resampled, y_resampled)
+
+        self.feature_importances_ = self.estimator.feature_importances_
+
+    def predict(self, X_test):
+        return self.estimator.predict(self.scaler.transform(X_test))
+    
+    def predict_proba(self, X_test):
+        return self.estimator.predict_proba(self.scaler.transform(X_test))
+    
 
 class Resampled_Cross_Validate:
 
