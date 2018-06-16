@@ -391,10 +391,8 @@ class Resampled_RFECV:
                              alpha=0.15)
 
             plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
-                             self.mean_score_['logloss'] +
-                             self.std_score_['logloss'],
-                             self.mean_score_['logloss'] -
-                             self.std_score_['logloss'],
+                             self.mean_score_['logloss'] + self.std_score_['logloss'],
+                             self.mean_score_['logloss'] - self.std_score_['logloss'],
                              alpha=0.15)
         else:
             pass
