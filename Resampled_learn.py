@@ -32,7 +32,7 @@ class Resampled_Prediction:
         self.estimator = estimator
         self.verbose = verbose
         self.feature_importances_ = 'No Value'
-    
+
     def fit(self, X, y):
 
         X_resampled, y_resampled = self.sampler.fit_sample(X, y)
@@ -45,13 +45,13 @@ class Resampled_Prediction:
     def predict(self, X_test):
 
         return self.estimator.predict(self.scaler.transform(X_test))
-    
+
     def predict_proba(self, X_test):
 
         return self.estimator.predict_proba(self.scaler.transform(X_test))
 
     def score(self, X, y):
-        
+
         return self.estimator.score(self.scaler.transform(X), y)
 
 
@@ -584,7 +584,8 @@ class Resampled_RFE:
         self.n_feature_reduce = self.N_feature - self.n_feature_select
 
         if self.n_feature_reduce % self.n_steps != 0:
-            raise ValueError('Error: n_steps must be a divisior of %d' % self.n_feature_reduce)
+            raise ValueError(
+                'Error: n_steps must be a divisior of %d' % self.n_feature_reduce)
         else:
             "結果格納用リストの生成"
             ACC_SCORE_mean = []
@@ -607,7 +608,8 @@ class Resampled_RFE:
             X_new = X
 
             "計算ステップリストの用意"
-            step = np.arange(self.n_steps, self.n_feature_reduce+self.n_steps, self.n_steps)[::-1]
+            step = np.arange(self.n_steps, self.n_feature_reduce +
+                             self.n_steps, self.n_steps)[::-1]
 
             if self.verbose is True:
                 print(
@@ -629,7 +631,7 @@ class Resampled_RFE:
                                                                                            verbose=self.verbose)
                 if i == 0:
                     Questions.append(IM_score)
-                
+
                 IM_score = IM_score.sort_values(
                     by='Score').reset_index(drop=True)
                 IM_new = IM_score.drop(range(self.n_steps))
@@ -650,8 +652,6 @@ class Resampled_RFE:
 
                 X_new = X_new.loc[:, IM_new.Var]
                 Questions.append(IM_new)
-
-               
 
             self.mean_score_ = {
                 'ACC': np.array(ACC_SCORE_mean[::-1]),
@@ -674,7 +674,8 @@ class Resampled_RFE:
             self.questions_ = Questions[::-1]
 
     def support(self):
-        df_t = pd.merge(self.questions_[self.n_feature_reduce], self.questions_[0], on='Var', how='outer')
+        df_t = pd.merge(self.questions_[self.n_feature_reduce], self.questions_[
+                        0], on='Var', how='outer')
         df_result = pd.concat([df_t['Var'], df_t['Score_y'].notnull()], axis=1)
         df_result.columns = ['Var', 'Support']
 
