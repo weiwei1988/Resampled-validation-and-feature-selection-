@@ -34,9 +34,13 @@ class Resampled_Prediction:
         self.feature_importances_ = 'No Value'
 
     def fit(self, X, y):
+        if self.sampler is not None:
+            X_resampled, y_resampled = self.sampler.fit_sample(X, y)
+        else:
+            X_resampled, y_resampled = X, y
 
-        X_resampled, y_resampled = self.sampler.fit_sample(X, y)
         self.scaler.fit(X_resampled)
+
         x_resampled = self.scaler.transform(X_resampled)
         self.estimator.fit(x_resampled, y_resampled)
 
@@ -109,7 +113,10 @@ class Resampled_Cross_Validate:
             y_te = y_train.values[test_index]
 
             try:
-                x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+                if smt is not None:
+                    x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+                else:
+                    x_ta_resampled, y_ta_resampled = x_ta, y_ta
             except ValueError:
                 print(
                     'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
@@ -182,7 +189,10 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
         y_te = y_train.values[test_index]
 
         try:
-            x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+            if smt is not None:
+                x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+            else:
+                x_ta_resampled, y_ta_resampled = x_ta, y_ta
         except ValueError:
             print(
                 'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
