@@ -107,7 +107,7 @@ class Resampled_Cross_Validate:
 
             except ValueError:
                 print(
-                    'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+                    'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or Combined methods')
 
             sts = StandardScaler()
             clf = xgb.XGBClassifier()
@@ -182,7 +182,7 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, v
 
         except ValueError:
             print(
-                'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+                'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or Combined methods')
 
         sts = StandardScaler()
 

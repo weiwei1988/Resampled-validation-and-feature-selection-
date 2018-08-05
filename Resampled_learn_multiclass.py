@@ -120,7 +120,7 @@ class Resampled_Cross_Validate:
                     x_ta_resampled, y_ta_resampled = x_ta, y_ta
             except ValueError:
                 print(
-                    'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+                    'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or Combined methods')
 
             sts = StandardScaler()
             pipe = make_pipeline(sts, self.estimator)
@@ -196,7 +196,7 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
                 x_ta_resampled, y_ta_resampled = x_ta, y_ta
         except ValueError:
             print(
-                'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or SMOTE')
+                'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or Combined methods')
 
         sts = StandardScaler()
 
