@@ -84,7 +84,7 @@ class Resampled_Cross_Validate:
                  scaler=StandardScaler(),
                  estimator=xgb.XGBClassifier(),
                  verbose=True
-                ):
+                 ):
 
         self.cv = cv
         self.verbose = verbose
@@ -126,7 +126,8 @@ class Resampled_Cross_Validate:
 
             try:
                 if self.sampler is not None:
-                    x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(x_ta, y_ta)
+                    x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(
+                        x_ta, y_ta)
                 else:
                     x_ta_resampled, y_ta_resampled = x_ta, y_ta
 
@@ -273,7 +274,7 @@ class Resampled_RFECV:
                  scaler=StandardScaler(),
                  estimator=xgb.XGBClassifier(),
                  verbose=False
-                ):
+                 ):
 
         self.n_steps = n_steps
         self.cv = cv

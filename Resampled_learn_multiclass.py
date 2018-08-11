@@ -45,7 +45,7 @@ class Resampled_Prediction:
             x_resampled = self.scaler.transform(X_resampled)
         else:
             pass
-        
+
         self.estimator.fit(x_resampled, y_resampled)
 
         if hasattr(self.estimator, 'feature_importances_') is True:
@@ -55,14 +55,14 @@ class Resampled_Prediction:
             self.coef_ = self.estimator.coef_
 
     def predict(self, X_test):
-        
+
         if self.scaler is not None:
             return self.estimator.predict(self.scaler.transform(X_test))
         else:
             return self.estimator.predict(X_test)
 
     def predict_proba(self, X_test):
-        
+
         if self.scaler is not None:
             return self.estimator.predict_proba(self.scaler.transform(X_test))
         else:
@@ -131,7 +131,8 @@ class Resampled_Cross_Validate:
 
             try:
                 if self.sampler is not None:
-                    x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(x_ta, y_ta)
+                    x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(
+                        x_ta, y_ta)
                 else:
                     x_ta_resampled, y_ta_resampled = x_ta, y_ta
 
@@ -427,8 +428,10 @@ class Resampled_RFECV:
                              alpha=0.15)
 
             plt.fill_between(np.arange(self.n_steps, len(X.columns) + self.n_steps, self.n_steps),
-                             self.mean_score_['logloss'] + self.std_score_['logloss'],
-                             self.mean_score_['logloss'] - self.std_score_['logloss'],
+                             self.mean_score_['logloss'] +
+                             self.std_score_['logloss'],
+                             self.mean_score_['logloss'] -
+                             self.std_score_['logloss'],
                              alpha=0.15)
         else:
             pass
