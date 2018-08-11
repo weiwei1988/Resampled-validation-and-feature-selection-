@@ -40,30 +40,47 @@ class Resampled_Prediction:
         else:
             X_resampled, y_resampled = X, y
 
-        self.scaler.fit(X_resampled)
-
-        x_resampled = self.scaler.transform(X_resampled)
+        if self.scaler is not None:
+            self.scaler.fit(X_resampled)
+            x_resampled = self.scaler.transform(X_resampled)
+        else:
+            pass
+        
         self.estimator.fit(x_resampled, y_resampled)
 
-        self.feature_importances_ = self.estimator.feature_importances_
+        if hasattr(self.estimator, 'feature_importances_') is True:
+            self.feature_importances_ = self.estimator.feature_importances_
+
+        elif hasattr(self.estimator, 'coef_') is True:
+            self.coef_ = self.estimator.coef_
 
     def predict(self, X_test):
-
-        return self.estimator.predict(self.scaler.transform(X_test))
+        
+        if self.scaler is not None:
+            return self.estimator.predict(self.scaler.transform(X_test))
+        else:
+            return self.estimator.predict(X_test)
 
     def predict_proba(self, X_test):
-
-        return self.estimator.predict_proba(self.scaler.transform(X_test))
+        
+        if self.scaler is not None:
+            return self.estimator.predict_proba(self.scaler.transform(X_test))
+        else:
+            return self.estimator.predict_proba(X_test)
 
     def score(self, X, y):
 
-        return self.estimator.score(self.scaler.transform(X), y)
+        if self.scaler is not None:
+            return self.estimator.score(self.scaler.transform(X), y)
+        else:
+            return self.estimator.score(X, y)
 
 
 class Resampled_Cross_Validate:
 
     def __init__(self,
                  n_splits,
+                 scaler=StandardScaler(),
                  sampler=RandomUnderSampler(ratio='not minority'),
                  estimator=xgb.XGBClassifier(n_jobs=-1),
                  average='micro',
@@ -72,6 +89,7 @@ class Resampled_Cross_Validate:
 
         self.n_splits = n_splits
         self.verbose = verbose
+        self.scaler = scaler
         self.sampler = sampler
         self.estimator = estimator
         self.average = average
@@ -105,8 +123,6 @@ class Resampled_Cross_Validate:
         else:
             pass
 
-        smt = self.sampler
-
         for train_index, test_index in flod.split(X_train, y_train):
             x_ta = X_train.values[train_index]
             x_te = X_train.values[test_index]
@@ -114,16 +130,19 @@ class Resampled_Cross_Validate:
             y_te = y_train.values[test_index]
 
             try:
-                if smt is not None:
-                    x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+                if self.sampler is not None:
+                    x_ta_resampled, y_ta_resampled = self.sampler.fit_sample(x_ta, y_ta)
                 else:
                     x_ta_resampled, y_ta_resampled = x_ta, y_ta
+
             except ValueError:
                 print(
                     'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or Combined methods')
 
-            sts = StandardScaler()
-            pipe = make_pipeline(sts, self.estimator)
+            if self.scaler is not None:
+                pipe = make_pipeline(self.scaler, self.estimator)
+            else:
+                pipe = self.estimator
 
             try:
                 pipe.fit(x_ta_resampled, y_ta_resampled)
@@ -166,7 +185,7 @@ def get_importance_score(X, IM_score):
     return Score
 
 
-def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, average, verbose=False):
+def Resampled_Valudation_Score(X_train, y_train, n_splits, scaler, sampler, estimator, average, verbose=False):
 
     ACC = []
 
@@ -181,8 +200,6 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
 
     flod = StratifiedKFold(n_splits=n_splits, random_state=1)
 
-    smt = sampler
-
     for train_index, test_index in flod.split(X_train, y_train):
         x_ta = X_train.values[train_index]
         x_te = X_train.values[test_index]
@@ -190,24 +207,28 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, estimator, a
         y_te = y_train.values[test_index]
 
         try:
-            if smt is not None:
-                x_ta_resampled, y_ta_resampled = smt.fit_sample(x_ta, y_ta)
+            if sampler is not None:
+                x_ta_resampled, y_ta_resampled = sampler.fit_sample(x_ta, y_ta)
             else:
                 x_ta_resampled, y_ta_resampled = x_ta, y_ta
+
         except ValueError:
             print(
                 'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or Combined methods')
 
-        sts = StandardScaler()
-
-        sts.fit(x_ta_resampled)
-        x_ta_resampled = sts.transform(x_ta_resampled)
-        x_te = sts.transform(x_te)
+        if scaler is not None:
+            sts = scaler
+            sts.fit(x_ta_resampled)
+            x_ta_resampled = sts.transform(x_ta_resampled)
+            x_te = sts.transform(x_te)
+        else:
+            pass
 
         try:
             estimator.fit(x_ta_resampled, y_ta_resampled)
             y_pred = estimator.predict(x_te)
             y_prob = estimator.predict_proba(x_te)
+
         except ValueError:
             print(
                 'Error on estimator. Please use right estimator for multiclass classification')
@@ -251,6 +272,7 @@ class Resampled_RFECV:
     def __init__(self,
                  n_steps,
                  cv,
+                 scaler=StandardScaler(),
                  sampler=RandomUnderSampler(ratio='not minority'),
                  estimator=xgb.XGBClassifier(n_jobs=-1),
                  average='micro',
@@ -260,6 +282,7 @@ class Resampled_RFECV:
         self.n_steps = n_steps
         self.cv = cv
         self.sampler = sampler
+        self.scaler = scaler
         self.verbose = verbose
         self.estimator = estimator
         self.average = average
@@ -310,7 +333,9 @@ class Resampled_RFECV:
                     pass
 
                 ACC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y,
-                                                                                  sampler=self.sampler, estimator=self.estimator,
+                                                                                  sampler=self.sampler,
+                                                                                  scaler=self.scaler,
+                                                                                  estimator=self.estimator,
                                                                                   average=self.average,
                                                                                   n_splits=self.cv,
                                                                                   verbose=self.verbose)
@@ -540,6 +565,7 @@ class Resampled_RFE:
                  n_steps,
                  cv,
                  sampler=RandomOverSampler(ratio='not minority'),
+                 scaler=StandardScaler(),
                  estimator=xgb.XGBClassifier(),
                  average='micro',
                  verbose=False
@@ -549,6 +575,7 @@ class Resampled_RFE:
         self.n_feature_select = n_feature_select
         self.cv = cv
         self.sampler = sampler
+        self.scaler = scaler
         self.estimator = estimator
         self.verbose = verbose
         self.average = average
@@ -606,6 +633,7 @@ class Resampled_RFE:
 
                 ACC, F1, PRE, REC, logloss, IM_score = Resampled_Valudation_Score(X_new, y,
                                                                                   sampler=self.sampler,
+                                                                                  scaler=self.scaler,
                                                                                   estimator=self.estimator,
                                                                                   average=self.average,
                                                                                   n_splits=self.cv,
