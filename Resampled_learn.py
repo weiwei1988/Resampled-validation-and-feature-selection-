@@ -42,11 +42,11 @@ class Resampled_Prediction:
 
         if self.scaler is not None:
             self.scaler.fit(X_resampled)
-            x_resampled = self.scaler.transform(X_resampled)
+            X_resampled = self.scaler.transform(X_resampled)
         else:
             pass
 
-        self.estimator.fit(x_resampled, y_resampled)
+        self.estimator.fit(X_resampled, y_resampled)
 
         if hasattr(self.estimator, 'feature_importances_') is True:
             self.feature_importances_ = self.estimator.feature_importances_
@@ -212,10 +212,9 @@ def Resampled_Valudation_Score(X_train, y_train, n_splits, sampler, scaler, esti
                 'Error on Sampler. Please use imblearn-RandomUndersampler, RandomOverSampler or Combined methods')
 
         if scaler is not None:
-            sts = scaler
-            sts.fit(x_ta_resampled)
-            x_ta_resampled = sts.transform(x_ta_resampled)
-            x_te = sts.transform(x_te)
+            scaler.fit(x_ta_resampled)
+            x_ta_resampled = scaler.transform(x_ta_resampled)
+            x_te = scaler.transform(x_te)
         else:
             pass
 
