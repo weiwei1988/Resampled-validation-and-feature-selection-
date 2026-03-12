@@ -1,0 +1,6 @@
+# iPhone Security Diagnostic Tool - 依存ライブラリ
+# インストール方法: pip install -r requirements_ios_check.txt
+# 対応OS: macOS 12以降
+# 対応Python: 3.9以降
+
+pymobiledevice3>=4.0.0
