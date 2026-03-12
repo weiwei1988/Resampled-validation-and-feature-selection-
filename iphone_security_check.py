@@ -277,9 +277,10 @@ async def check_crash_logs(lockdown):
     try:
         from pymobiledevice3.services.crash_reports import CrashReportsManager
         async with CrashReportsManager(lockdown=lockdown) as manager:
-            # クラッシュログ一覧を取得
+            # クラッシュログ一覧を取得（ls はリストを返すコルーチン）
             crash_entries = []
-            async for item in manager.ls("/"):
+            items = await manager.ls("/")
+            for item in items:
                 crash_entries.append(str(item))
 
             # 最新30件のログ内容を取得
