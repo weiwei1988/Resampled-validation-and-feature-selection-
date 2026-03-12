@@ -11,7 +11,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DOWNLOADS="$HOME/Downloads"
+VENV_DIR="$SCRIPT_DIR/venv"
 
 echo ""
 echo "========================================"
@@ -52,19 +52,11 @@ else
     echo "  [OK] Python3 は既にインストール済みです ($(python3 --version))"
 fi
 
-# pip3 の確認
-if ! command -v pip3 &>/dev/null; then
-    echo "  [エラー] pip3 が見つかりません。"
-    echo "  brew install python3 を再試行してください。"
-    exit 1
-fi
-echo "  [OK] pip3 確認済み ($(pip3 --version))"
-
 # ────────────────────────────────────────────
-# ステップ 3: 依存ライブラリのインストール
+# ステップ 3: 仮想環境(venv)の作成 + ライブラリインストール
 # ────────────────────────────────────────────
 echo ""
-echo "[3/3] 依存ライブラリをインストール中..."
+echo "[3/3] 仮想環境を作成して依存ライブラリをインストール中..."
 
 REQUIREMENTS="$SCRIPT_DIR/requirements_ios_check.txt"
 
@@ -74,7 +66,13 @@ if [ ! -f "$REQUIREMENTS" ]; then
     exit 1
 fi
 
-pip3 install -r "$REQUIREMENTS"
+# venv 作成（既存なら再利用）
+python3 -m venv "$VENV_DIR"
+echo "  [OK] 仮想環境を作成しました: $VENV_DIR"
+
+# venv 内の pip でライブラリをインストール
+"$VENV_DIR/bin/pip" install --upgrade pip -q
+"$VENV_DIR/bin/pip" install -r "$REQUIREMENTS"
 echo "  [OK] ライブラリのインストール完了"
 
 # ────────────────────────────────────────────
@@ -88,7 +86,7 @@ echo ""
 echo "  診断を開始するには以下を実行してください:"
 echo ""
 echo "    cd ~/Downloads"
-echo "    python3 iphone_security_check.py"
+echo "    venv/bin/python3 iphone_security_check.py"
 echo ""
 echo "  ※ iPhoneをUSB-Cケーブルで接続してから実行してください"
 echo "  ※ iPhoneの画面で「このコンピュータを信頼」をタップしてください"
