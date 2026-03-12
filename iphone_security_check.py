@@ -6,18 +6,17 @@ USB-C経由でMacとiPhoneを接続してセキュリティ診断を行うツー
 使い方:
     1. iPhoneをUSB-CケーブルでMacに接続
     2. iPhoneの画面で「このコンピュータを信頼」をタップ
-    3. python iphone_security_check.py を実行
+    3. venv/bin/python3 iphone_security_check.py を実行
 
 必要なライブラリ:
     pip install pymobiledevice3
 """
 
+import asyncio
 import json
 import re
 import sys
-import time
 from datetime import datetime
-from threading import Event, Thread
 
 # 既知スパイウェア・ストーカーウェアのバンドルIDリスト
 KNOWN_SPYWARE = {
@@ -41,22 +40,12 @@ REMOTE_ACCESS_APPS = {
     "com.splashtop.splashtop2": "Splashtop（リモートデスクトップ）",
 }
 
-# 既知の不審/追跡ドメイン（一部）
+# 既知の不審/追跡ドメイン
 SUSPICIOUS_DOMAINS = [
-    "spy-phone",
-    "flexispy",
-    "mspy",
-    "spyera",
-    "highstermobile",
-    "ikeymonitor",
-    "phonetracker",
-    "phonesheriff",
-    "mobiletrackerapp",
+    "spy-phone", "flexispy", "mspy", "spyera",
+    "highstermobile", "ikeymonitor", "phonetracker",
+    "phonesheriff", "mobiletrackerapp",
 ]
-
-# 診断ログ（グローバル）
-syslog_entries = []
-stop_syslog = Event()
 
 
 def print_header():
@@ -69,24 +58,22 @@ def print_header():
 
 
 def check_dependencies():
-    """必要なライブラリの確認"""
     try:
-        import pymobiledevice3
+        import pymobiledevice3  # noqa: F401
         return True
     except ImportError:
         print("[エラー] pymobiledevice3 がインストールされていません。")
-        print("  以下のコマンドでインストールしてください:")
-        print("  pip install pymobiledevice3")
+        print("  venv/bin/pip install pymobiledevice3")
         return False
 
 
-def connect_device():
+async def connect_device():
     """iPhoneに接続してLockdownClientを返す"""
     from pymobiledevice3.lockdown import create_using_usbmux
 
     print("[接続中] iPhoneを検索しています...")
     try:
-        lockdown = create_using_usbmux()
+        lockdown = await create_using_usbmux()
         return lockdown
     except Exception as e:
         print(f"[エラー] デバイスに接続できません: {e}")
@@ -100,26 +87,46 @@ def connect_device():
 
 def get_device_info(lockdown):
     """デバイス基本情報の取得"""
-    info = {
-        "device_name": lockdown.get_value("", "DeviceName"),
-        "product_type": lockdown.get_value("", "ProductType"),
-        "product_version": lockdown.get_value("", "ProductVersion"),
-        "build_version": lockdown.get_value("", "BuildVersion"),
-        "udid": lockdown.get_value("", "UniqueDeviceID"),
-        "serial_number": lockdown.get_value("", "SerialNumber"),
-    }
-    return info
+    # pymobiledevice3 v4+ はプロパティ経由でアクセス
+    try:
+        vals = lockdown.all_values
+        return {
+            "device_name":     vals.get("DeviceName", "Unknown"),
+            "product_type":    vals.get("ProductType", "Unknown"),
+            "product_version": vals.get("ProductVersion", "Unknown"),
+            "build_version":   vals.get("BuildVersion", "Unknown"),
+            "udid":            vals.get("UniqueDeviceID", lockdown.udid),
+            "serial_number":   vals.get("SerialNumber", "Unknown"),
+        }
+    except Exception:
+        # フォールバック: 属性で直接アクセス
+        return {
+            "device_name":     getattr(lockdown, "name", "Unknown"),
+            "product_type":    getattr(lockdown, "product_type", "Unknown"),
+            "product_version": getattr(lockdown, "product_version", "Unknown"),
+            "build_version":   getattr(lockdown, "build_version", "Unknown"),
+            "udid":            getattr(lockdown, "udid", "Unknown"),
+            "serial_number":   getattr(lockdown, "serial_number", "Unknown"),
+        }
 
 
-def check_installed_apps(lockdown):
+async def check_installed_apps(lockdown):
     """インストール済みアプリの診断"""
     from pymobiledevice3.services.installation_proxy import InstallationProxyService
 
     print("[1/4] インストール済みアプリを診断中...")
 
     try:
-        service = InstallationProxyService(lockdown=lockdown)
-        apps = service.get_apps(app_types=["User", "System"])
+        async with InstallationProxyService(lockdown=lockdown) as service:
+            apps = await service.get_apps(app_types=["User", "System"])
+    except TypeError:
+        # 古いAPIシグネチャのフォールバック
+        try:
+            async with InstallationProxyService(lockdown=lockdown) as service:
+                apps = await service.get_apps()
+        except Exception as e:
+            print(f"  [スキップ] アプリ一覧の取得に失敗しました: {e}")
+            return {"total": 0, "spyware": [], "remote_access": [], "error": str(e)}
     except Exception as e:
         print(f"  [スキップ] アプリ一覧の取得に失敗しました: {e}")
         return {"total": 0, "spyware": [], "remote_access": [], "error": str(e)}
@@ -130,18 +137,17 @@ def check_installed_apps(lockdown):
 
     for bundle_id, app_info in apps.items():
         app_name = app_info.get("CFBundleDisplayName", app_info.get("CFBundleName", bundle_id))
-
         if bundle_id in KNOWN_SPYWARE:
             detected_spyware.append({
                 "bundle_id": bundle_id,
                 "name": app_name,
-                "description": KNOWN_SPYWARE[bundle_id]
+                "description": KNOWN_SPYWARE[bundle_id],
             })
         if bundle_id in REMOTE_ACCESS_APPS:
             detected_remote.append({
                 "bundle_id": bundle_id,
                 "name": app_name,
-                "description": REMOTE_ACCESS_APPS[bundle_id]
+                "description": REMOTE_ACCESS_APPS[bundle_id],
             })
 
     print(f"  確認済み: {total_apps} アプリ")
@@ -158,58 +164,38 @@ def check_installed_apps(lockdown):
     else:
         print("  [OK] リモートアクセスアプリは検出されませんでした")
 
-    return {
-        "total": total_apps,
-        "spyware": detected_spyware,
-        "remote_access": detected_remote,
-    }
+    return {"total": total_apps, "spyware": detected_spyware, "remote_access": detected_remote}
 
 
-def check_profiles(lockdown):
+async def check_profiles(lockdown):
     """構成プロファイルの診断"""
     print("\n[2/4] 構成プロファイルを診断中...")
 
     try:
         from pymobiledevice3.services.mobile_config import MobileConfigService
-        service = MobileConfigService(lockdown=lockdown)
-        profiles = service.get_profile_list()
+        async with MobileConfigService(lockdown=lockdown) as service:
+            profiles = await service.get_profile_list()
     except Exception as e:
         print(f"  [スキップ] プロファイル一覧の取得に失敗しました: {e}")
         return {"profiles": [], "suspicious": [], "error": str(e)}
 
     profile_list = profiles.get("ProfileMetadata", {})
-    suspicious_profiles = []
     found_profiles = []
+    suspicious_profiles = []
 
     for profile_id, profile_info in profile_list.items():
         name = profile_info.get("PayloadDisplayName", "不明")
-        org = profile_info.get("PayloadOrganization", "不明")
-        description = profile_info.get("PayloadDescription", "")
+        org  = profile_info.get("PayloadOrganization", "不明")
+        found_profiles.append({"id": profile_id, "name": name, "organization": org})
 
-        found_profiles.append({
-            "id": profile_id,
-            "name": name,
-            "organization": org,
-            "description": description,
-        })
-
-        # MDMプロファイルや不審なプロファイルの検出
-        is_suspicious = False
         reason = ""
-
         if "MDM" in name.upper() or "MDM" in org.upper():
-            is_suspicious = True
             reason = "MDM（モバイルデバイス管理）プロファイル"
         elif org.lower() in ["unknown", "不明", ""]:
-            is_suspicious = True
             reason = "発行元不明のプロファイル"
 
-        if is_suspicious:
-            suspicious_profiles.append({
-                "name": name,
-                "organization": org,
-                "reason": reason,
-            })
+        if reason:
+            suspicious_profiles.append({"name": name, "organization": org, "reason": reason})
 
     print(f"  プロファイル数: {len(found_profiles)} 件")
 
@@ -219,105 +205,72 @@ def check_profiles(lockdown):
     else:
         print("  [OK] 不審な構成プロファイルは検出されませんでした")
 
-    return {
-        "profiles": found_profiles,
-        "suspicious": suspicious_profiles,
-    }
+    return {"profiles": found_profiles, "suspicious": suspicious_profiles}
 
 
-def collect_syslog_worker(lockdown, duration_sec):
-    """バックグラウンドでsyslogを収集するワーカー"""
-    global syslog_entries
-    try:
-        from pymobiledevice3.services.os_trace import OsTraceService
-        service = OsTraceService(lockdown=lockdown)
-        for entry in service.syslog():
-            if stop_syslog.is_set():
-                break
-            syslog_entries.append(str(entry))
-    except Exception:
-        pass
-
-
-def check_syslog(lockdown, duration_sec=20):
-    """システムログの解析"""
-    global syslog_entries
-    syslog_entries = []
-    stop_syslog.clear()
+async def check_syslog(lockdown, duration_sec=20):
+    """システムログの解析（asyncio.wait_for でタイムアウト）"""
+    from pymobiledevice3.services.os_trace import OsTraceService
 
     print(f"\n[3/4] システムログを解析中（{duration_sec}秒間）...")
     print("  ※ログを収集中。しばらくお待ちください...")
 
-    # バックグラウンドスレッドでsyslog収集
-    worker = Thread(target=collect_syslog_worker, args=(lockdown, duration_sec), daemon=True)
-    worker.start()
+    entries = []
 
-    # プログレス表示
-    for i in range(duration_sec):
-        time.sleep(1)
-        remaining = duration_sec - i - 1
-        print(f"  残り {remaining} 秒...", end="\r")
+    async def collect():
+        try:
+            async with OsTraceService(lockdown=lockdown) as service:
+                async for entry in service.syslog():
+                    entries.append(str(entry))
+        except Exception:
+            pass
 
-    stop_syslog.set()
-    worker.join(timeout=3)
-    print()
+    try:
+        await asyncio.wait_for(collect(), timeout=duration_sec)
+    except asyncio.TimeoutError:
+        pass
 
     # ログ解析
-    ip_pattern = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
+    ip_pattern     = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
     domain_pattern = re.compile(r'(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}')
 
     found_ips = set()
-    suspicious_domains_found = []
+    sus_domains = []
+    full_log = "\n".join(entries)
 
-    full_log = "\n".join(syslog_entries)
-
-    # IPアドレス抽出（プライベートIPを除外）
     for ip in ip_pattern.findall(full_log):
-        if not (ip.startswith("192.168.") or ip.startswith("10.") or
-                ip.startswith("172.16.") or ip.startswith("127.") or
-                ip == "0.0.0.0" or ip == "255.255.255.255"):
+        if not (ip.startswith(("192.168.", "10.", "172.16.", "127.")) or
+                ip in ("0.0.0.0", "255.255.255.255")):
             found_ips.add(ip)
 
-    # 不審ドメインの検出
     for domain in domain_pattern.findall(full_log):
-        for sus_keyword in SUSPICIOUS_DOMAINS:
-            if sus_keyword in domain.lower():
-                suspicious_domains_found.append(domain)
+        for kw in SUSPICIOUS_DOMAINS:
+            if kw in domain.lower():
+                sus_domains.append(domain)
 
-    suspicious_domains_found = list(set(suspicious_domains_found))
+    sus_domains = list(set(sus_domains))
 
-    print(f"  収集したログエントリ: {len(syslog_entries)} 件")
-
+    print(f"  収集したログエントリ: {len(entries)} 件")
     if found_ips:
         print(f"  外部通信先IP ({len(found_ips)} 件): {', '.join(list(found_ips)[:10])}")
     else:
         print("  外部通信先IP: 検出なし")
 
-    if suspicious_domains_found:
-        for domain in suspicious_domains_found:
-            print(f"  [危険] 不審なドメインへの通信: {domain}")
+    if sus_domains:
+        for d in sus_domains:
+            print(f"  [危険] 不審なドメインへの通信: {d}")
     else:
         print("  [OK] 不審なドメインへの通信は検出されませんでした")
 
-    return {
-        "log_count": len(syslog_entries),
-        "external_ips": list(found_ips),
-        "suspicious_domains": suspicious_domains_found,
-    }
+    return {"log_count": len(entries), "external_ips": list(found_ips), "suspicious_domains": sus_domains}
 
 
 def calculate_risk(app_result, profile_result, syslog_result):
-    """危険度スコアを計算"""
     score = 0
-
-    if "spyware" in app_result:
-        score += len(app_result["spyware"]) * 30
-    if "remote_access" in app_result:
-        score += len(app_result["remote_access"]) * 10
-    if "suspicious" in profile_result:
-        score += len(profile_result["suspicious"]) * 20
-    if "suspicious_domains" in syslog_result:
-        score += len(syslog_result["suspicious_domains"]) * 25
+    score += len(app_result.get("spyware", [])) * 30
+    score += len(app_result.get("remote_access", [])) * 10
+    score += len(profile_result.get("suspicious", [])) * 20
+    score += len(syslog_result.get("suspicious_domains", [])) * 25
 
     if score == 0:
         return "低", "特に問題は検出されませんでした"
@@ -328,10 +281,8 @@ def calculate_risk(app_result, profile_result, syslog_result):
 
 
 def save_report(device_info, app_result, profile_result, syslog_result, risk_level, risk_message):
-    """診断レポートをJSONファイルに保存"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"security_report_{timestamp}.json"
-
     report = {
         "generated_at": datetime.now().isoformat(),
         "device": device_info,
@@ -345,40 +296,33 @@ def save_report(device_info, app_result, profile_result, syslog_result, risk_lev
             "suspicious_domains": syslog_result.get("suspicious_domains", []),
         },
     }
-
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
-
     return filename
 
 
-def main():
+async def main():
     print_header()
 
-    # 依存ライブラリ確認
     if not check_dependencies():
         sys.exit(1)
 
-    # デバイス接続
-    lockdown = connect_device()
+    lockdown = await connect_device()
     if lockdown is None:
         sys.exit(1)
 
-    # デバイス情報取得
     device_info = get_device_info(lockdown)
     print(f"[接続成功] {device_info['device_name']} ({device_info['product_type']}, iOS {device_info['product_version']})")
-    print(f"           UDID: {device_info['udid'][:8]}...{device_info['udid'][-4:]}")
+    udid = device_info['udid']
+    print(f"           UDID: {udid[:8]}...{udid[-4:]}")
     print()
 
-    # 各診断の実行
-    app_result = check_installed_apps(lockdown)
-    profile_result = check_profiles(lockdown)
-    syslog_result = check_syslog(lockdown, duration_sec=20)
+    app_result     = await check_installed_apps(lockdown)
+    profile_result = await check_profiles(lockdown)
+    syslog_result  = await check_syslog(lockdown, duration_sec=20)
 
-    # 危険度算出
     risk_level, risk_message = calculate_risk(app_result, profile_result, syslog_result)
 
-    # 結果サマリー
     print("\n" + "=" * 55)
     print("[4/4] 診断完了")
     print(f"  危険度: {risk_level}")
@@ -397,7 +341,6 @@ def main():
         print("  1. 不審なアプリ・プロファイルを確認・削除")
         print("  2. しばらく様子を見て再度診断を実施")
 
-    # レポート保存
     report_file = save_report(device_info, app_result, profile_result, syslog_result, risk_level, risk_message)
     print(f"\n  詳細レポート保存先: {report_file}")
     print("=" * 55)
@@ -408,4 +351,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
